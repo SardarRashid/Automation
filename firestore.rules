@@ -1,42 +1,8 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Global catch-all safety net (Pillar 1)
     match /{document=**} {
       allow read, write: if false;
-    }
-
-    // Helper functions
-    function isValidId(id) {
-      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
-    }
-
-    // Category templates (Pillar 2 & 3)
-    match /category_templates/{id} {
-      allow read: if true;
-      allow write: if isValidId(id);
-    }
-
-    // Inventory records
-    match /inventory_records/{id} {
-      allow read: if true;
-      allow write: if isValidId(id);
-    }
-
-    // Activity logs
-    match /activity_logs/{id} {
-      allow read: if true;
-      allow write: if isValidId(id);
-    }
-
-    // Storekeepers matches
-    match /storekeepers/{id} {
-      allow read, write: if true;
-    }
-
-    // Store rooms matches
-    match /store_rooms/{id} {
-      allow read, write: if true;
     }
   }
 }

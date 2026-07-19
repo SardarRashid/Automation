@@ -62,6 +62,12 @@
     "$other": {
       ".read": "auth != null",
       ".write": "auth != null"
+    },
+    "request_forms_history": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        ".write": "auth != null && auth.uid === $uid"
+      }
     }
   }
 }

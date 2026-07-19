@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { FileSpreadsheet, Plus, Trash2, Printer, Download, Loader2, CheckCircle, AlertCircle, FilePlus, X, History, FileText } from 'lucide-react';
 import { getBackendUrl } from '../lib/config';
-import { db, auth } from '../lib/firebase';
-import { collection, addDoc, getDocs, query, where, deleteDoc, doc, orderBy } from 'firebase/firestore';
+import { database, auth } from '../lib/firebase';
+import { ref, push, get, remove } from 'firebase/database';
 import * as XLSX from 'xlsx';
 
 interface HistoryItem {
@@ -318,7 +318,7 @@ export default function RequestForms() {
           const driverName = headerData['Driver Name'] || headerData['Employee Name'] || headerData['Employee/Van Name'] || 'N/A';
           const truckNumber = headerData['Van/Truck Number'] || headerData['Van Number'] || 'N/A';
           
-          await addDoc(collection(db, 'request_forms_history'), {
+          await push(ref(database, `request_forms_history/${auth.currentUser.uid}`), {
             uid: auth.currentUser.uid,
             email: auth.currentUser.email,
             date: new Date().toISOString(),
@@ -364,7 +364,7 @@ export default function RequestForms() {
 
   const deleteHistoryItem = async (id: string) => {
     try {
-      await deleteDoc(doc(db, 'request_forms_history', id));
+      await remove(ref(database, `request_forms_history/${auth.currentUser?.uid}/${id}`));
       setHistoryItems(prev => prev.filter(item => item.id !== id));
     } catch (err) {
       console.error("Failed to delete history item:", err);
@@ -375,7 +375,7 @@ export default function RequestForms() {
     if (!window.confirm('Are you sure you want to clear all your request form history?')) return;
     try {
       for (const item of historyItems) {
-        await deleteDoc(doc(db, 'request_forms_history', item.id));
+        await remove(ref(database, `request_forms_history/${auth.currentUser?.uid}/${item.id}`));
       }
       setHistoryItems([]);
     } catch (err) {
