@@ -1,0 +1,86 @@
+{
+    "firestore": [
+        {
+            "database": "ai-studio-d79e9548-836a-4942-9303-48c1f0459e1d",
+            "rules": "firestore.rules"
+        }
+    ],
+    "database": {
+        "rules": "database.rules.json"
+    },
+    "hosting": [
+        {
+            "ignore": [
+                "firebase.json",
+                "**/.*",
+                "**/node_modules/**"
+            ],
+            "public": "frontend/dist",
+            "rewrites": [
+                {
+                    "destination": "/index.html",
+                    "source": "**"
+                }
+            ],
+            "site": "automation-suit-cece7"
+        },
+        {
+            "ignore": [
+                "firebase.json",
+                "**/.*",
+                "**/node_modules/**"
+            ],
+            "public": "frontend/dist",
+            "rewrites": [
+                {
+                    "destination": "/index.html",
+                    "source": "**"
+                }
+            ],
+            "site": "automation-suit-inventory"
+        },
+        {
+            "ignore": [
+                "firebase.json",
+                "**/.*",
+                "**/node_modules/**"
+            ],
+            "public": "frontend/dist",
+            "rewrites": [
+                {
+                    "destination": "/index.html",
+                    "source": "**"
+                }
+            ],
+            "site": "automation-suit-salesman"
+        },
+        {
+            "ignore": [
+                "firebase.json",
+                "**/.*",
+                "**/node_modules/**"
+            ],
+            "public": "frontend/dist",
+            "rewrites": [
+                {
+                    "destination": "/index.html",
+                    "source": "**"
+                }
+            ],
+            "site": "automation-suit-scanner"
+        }
+    ],
+    "functions": [
+        {
+            "ignore": [
+                "node_modules",
+                ".git",
+                "firebase-debug.log",
+                "firebase-debug.*.log",
+                "*.local"
+            ],
+            "source": "functions",
+            "codebase": "default"
+        }
+    ]
+}

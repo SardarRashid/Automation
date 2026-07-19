@@ -1,0 +1,6 @@
+{
+  "name": "Inventory Tracker",
+  "description": "An organized storekeeper inventory system to automate fruit and vegetable daily counts, track incoming stock and sales, and export audit reports as Excel-ready CSV files.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

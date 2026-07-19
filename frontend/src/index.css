@@ -1,0 +1,61 @@
+﻿@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 248 250 252;
+    --surface: 255 255 255;
+    --border: 226 232 240;
+    --text-main: 15 23 42;
+    --text-muted: 100 116 139;
+    --primary: 79 70 229;
+  }
+
+  .dark {
+    --background: 15 23 42;
+    --surface: 30 41 59;
+    --border: 51 65 85;
+    --text-main: 248 250 252;
+    --text-muted: 148 163 184;
+    --primary: 99 102 241;
+  }
+
+  body {
+    background-color: rgb(var(--background));
+    color: rgb(var(--text-main));
+    font-family: 'Inter', sans-serif;
+  }
+}
+
+/* Fallback overrides for legacy components */
+.dark .bg-white { background-color: rgb(var(--surface)) !important; border-color: rgb(var(--border)) !important; }
+.dark .bg-slate-50 { background-color: rgb(var(--background)) !important; }
+.dark .bg-slate-100 { background-color: rgb(30 41 59) !important; }
+.dark .text-slate-800, .dark .text-slate-900 { color: rgb(var(--text-main)) !important; }
+.dark .text-slate-600, .dark .text-slate-500, .dark .text-slate-700 { color: rgb(var(--text-muted)) !important; }
+.dark .border-slate-200, .dark .border-slate-100 { border-color: rgb(var(--border)) !important; }
+.dark input, .dark select, .dark textarea { background-color: rgb(15 23 42) !important; color: rgb(var(--text-main)) !important; border-color: rgb(var(--border)) !important; }
+.dark table th { background-color: rgb(30 41 59) !important; color: rgb(226 232 240) !important; }
+.dark table td { border-color: rgb(var(--border)) !important; }
+
+/* Dark mode accent soft overrides */
+.dark .text-indigo-700 { color: #818cf8 !important; }
+.dark .text-emerald-700 { color: #34d399 !important; }
+.dark .text-amber-700 { color: #fbbf24 !important; }
+.dark .text-rose-700 { color: #fb7185 !important; }
+.dark .text-blue-700 { color: #60a5fa !important; }
+.dark .bg-indigo-50 { background-color: rgba(67, 56, 202, 0.2) !important; }
+.dark .bg-emerald-50 { background-color: rgba(4, 120, 87, 0.2) !important; }
+.dark .bg-amber-50 { background-color: rgba(180, 83, 9, 0.2) !important; }
+.dark .bg-rose-50 { background-color: rgba(190, 18, 60, 0.2) !important; }
+
+/* Skeletons */
+.skeleton {
+  @apply animate-pulse bg-slate-200 dark:bg-slate-700 rounded;
+}
+
+@media print {
+  * { overflow: visible !important; height: auto !important; max-height: none !important; }
+  html, body, #root { min-height: 100% !important; background: white !important; display: block !important; position: static !important; margin: 0 !important; padding: 0 !important; }
+}

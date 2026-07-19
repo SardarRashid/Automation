@@ -1,0 +1,130 @@
+{
+  "entities": {
+    "CategoryTemplate": {
+      "title": "CategoryTemplate",
+      "description": "Product category templates with varieties and sizes",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "varieties": {
+          "type": "array"
+        },
+        "sizes": {
+          "type": "array"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "varieties",
+        "sizes"
+      ]
+    },
+    "InventoryRecord": {
+      "title": "InventoryRecord",
+      "description": "A row of inventory representing product counts on a calendar date",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "date": {
+          "type": "string"
+        },
+        "category": {
+          "type": "string"
+        },
+        "variety": {
+          "type": "string"
+        },
+        "size": {
+          "type": "string"
+        },
+        "location": {
+          "type": "string"
+        },
+        "arrivalDate": {
+          "type": "string"
+        },
+        "openingStock": {
+          "type": "integer"
+        },
+        "incoming": {
+          "type": "integer"
+        },
+        "sold": {
+          "type": "integer"
+        },
+        "available": {
+          "type": "integer"
+        },
+        "notes": {
+          "type": "string"
+        },
+        "updatedAt": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "date",
+        "category",
+        "variety",
+        "size",
+        "location",
+        "arrivalDate",
+        "openingStock",
+        "incoming",
+        "sold",
+        "available",
+        "updatedAt"
+      ]
+    },
+    "ActivityLog": {
+      "title": "ActivityLog",
+      "description": "System log of audit-related user actions",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "timestamp": {
+          "type": "string"
+        },
+        "action": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "details": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "timestamp",
+        "action",
+        "description"
+      ]
+    }
+  },
+  "firestore": {
+    "/category_templates/{id}": {
+      "schema": "CategoryTemplate",
+      "description": "Collection of product category settings available for the cold store portal"
+    },
+    "/inventory_records/{id}": {
+      "schema": "InventoryRecord",
+      "description": "Detailed multi-field audit ledger records grouped and queried by calendar date"
+    },
+    "/activity_logs/{id}": {
+      "schema": "ActivityLog",
+      "description": "System activities and logs of audit events tracker"
+    }
+  }
+}

@@ -1,0 +1,202 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;705;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
+@import "tailwindcss";
+
+@variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+  
+  --color-green-850: rgb(20 83 45); /* deep dark green */
+  --color-green-905: rgb(15 61 30); /* even deeper green */
+  --color-emerald-905: rgb(6 78 59); /* rich dark emerald */
+  --color-slate-850: rgb(26 35 51); /* beautiful dark slate */
+  --color-sky-850: rgb(7 89 133); /* deep sky blue */
+  --color-green-705: rgb(21 128 61); /* vibrant green-700 */
+  --color-slate-505: rgb(100 116 139); /* readable slate-500 */
+  --color-slate-705: rgb(51 65 85); /* high-contrast slate-700 */
+}
+
+/* Dedicated CSS Print Stylesheet for Professional Hard-Copy Daily Audit Reports */
+@media print {
+  /* Hide non-print structures like web headers, navigation tabs, buttons, spinners, search, footers */
+  header, 
+  footer, 
+  nav, 
+  .no-print, 
+  button, 
+  form, 
+  .manual-log,
+  input[type="search"],
+  .supervisor-dispatch-panel, 
+  .date-row,
+  .category-quick-filter,
+  .quick-add-shipment,
+  .force-sync-container,
+  .tab-bar-navigation,
+  .user-session-bar-container {
+    display: none !important;
+  }
+
+  /* Reset layout configurations for flat continuous page representation */
+  body, 
+  html {
+    background: #ffffff !important;
+    background-color: #ffffff !important;
+    color: #000000 !important;
+    font-size: 11px !important;
+    line-height: 1.4 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+  }
+
+  /* Force print background elements to ensure subtle lines show up */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Adjust primary containers to avoid clipping, flex gaps, and overflow */
+  main, 
+  .workspace-main,
+  #root, 
+  div {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  /* Setup full portrait page layout context */
+  @page {
+    size: portrait;
+    margin: 12mm 15mm 12mm 15mm;
+  }
+
+  /* Clean up tables specifically for hard-copy output */
+  table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    margin-top: 15px !important;
+    margin-bottom: 20px !important;
+    page-break-inside: auto !important;
+  }
+
+  tr {
+    page-break-inside: avoid !important;
+    page-break-after: auto !important;
+  }
+
+  thead {
+    display: table-header-group !important;
+    background: #f1f5f9 !important;
+  }
+
+  th {
+    border: 1px solid #94a3b8 !important;
+    color: #000000 !important;
+    font-weight: 700 !important;
+    text-transform: uppercase !important;
+    padding: 6px 8px !important;
+    background-color: #f1f5f9 !important;
+    font-size: 9px !important;
+  }
+
+  td {
+    border: 1px solid #cbd5e1 !important;
+    padding: 6px 8px !important;
+    color: #000000 !important;
+    font-size: 9.5px !important;
+  }
+
+  /* Flat layout representation of inputs */
+  input, 
+  select, 
+  textarea {
+    border: none !important;
+    outline: none !important;
+    background: transparent !important;
+    background-color: transparent !important;
+    box-shadow: none !important;
+    color: #000000 !important;
+    font-weight: bold !important;
+    width: 100% !important;
+    text-align: center !important;
+    pointer-events: none !important;
+    -moz-appearance: textfield !important;
+  }
+
+  input[type="number"]::-webkit-outer-spin-button,
+  input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none !important;
+    margin: 0 !important;
+  }
+
+  /* Elements designed to act specifically as print elements */
+  .print-only {
+    display: block !important;
+  }
+
+  .print-grid {
+    display: grid !important;
+  }
+}
+
+/* High Contrast Dark Mode Global Overrides */
+.dark body {
+  background-color: rgb(15 23 42) !important; /* Slate-900 background */
+}
+
+/* Ensure white background cards adapt beautifully to dark slate */
+.dark .bg-white {
+  background-color: rgb(30 41 59) !important; /* Slate-800 */
+}
+
+/* Change slate-50 backgrounds in tables / containers */
+.dark .bg-slate-50 {
+  background-color: rgb(15 23 42) !important; /* Slate-900 */
+}
+
+.dark .bg-slate-100 {
+  background-color: rgb(30 41 59) !important; /* Slate-800 */
+}
+
+.dark .text-slate-900,
+.dark .text-slate-800 {
+  color: rgb(248 250 252) !important; /* Slate-50 */
+}
+
+.dark .text-slate-705,
+.dark .text-slate-700 {
+  color: rgb(226 232 240) !important; /* Slate-200 */
+}
+
+.dark .text-slate-600,
+.dark .text-slate-500 {
+  color: rgb(148 163 184) !important; /* Slate-400 */
+}
+
+.dark .border-slate-200,
+.dark .border-slate-300 {
+  border-color: rgb(51 65 85) !important; /* Slate-700 for distinct grids */
+}
+
+/* Forms components high contrast styling */
+.dark input, 
+.dark select, 
+.dark textarea {
+  background-color: rgb(15 23 42) !important; 
+  color: rgb(255 255 255) !important;
+  border-color: rgb(100 116 139) !important;
+}
+
+.dark option {
+  background-color: rgb(15 23 42) !important;
+  color: rgb(255 255 255) !important;
+}
+
+

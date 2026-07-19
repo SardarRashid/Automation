@@ -1,0 +1,67 @@
+{
+  "rules": {
+    "users": {
+      ".read": "auth != null",
+      ".write": "auth != null && (root.child('users').child(auth.token.email.replace('.', '_')).child('role').val() === 'it_admin' || root.child('users').child(auth.token.email.replace('.', '_')).child('role').val() === 'admin')",
+      "$userId": {
+        ".write": "auth != null && !data.exists() && newData.child('email').val() === auth.token.email && newData.child('role').val() === 'pending'"
+      }
+    },
+    "sales_orders": {
+      ".read": "auth != null",
+      ".write": "auth != null && (root.child('users').child(auth.token.email.replace('.', '_')).child('role').val() === 'it_admin' || root.child('users').child(auth.token.email.replace('.', '_')).child('role').val() === 'admin' || root.child('users').child(auth.token.email.replace('.', '_')).child('role').val() === 'SALESPERSON')",
+      ".indexOn": [
+        "date",
+        "salesmanId",
+        "status",
+        "customerId"
+      ]
+    },
+    "sales_payments": {
+      ".read": "auth != null",
+      ".write": "auth != null && (root.child('users').child(auth.token.email.replace('.', '_')).child('role').val() === 'it_admin' || root.child('users').child(auth.token.email.replace('.', '_')).child('role').val() === 'admin' || root.child('users').child(auth.token.email.replace('.', '_')).child('role').val() === 'SALESPERSON')",
+      ".indexOn": [
+        "date",
+        "salesmanId",
+        "customerId"
+      ]
+    },
+    "inventory_records": {
+      ".read": "auth != null",
+      ".write": "auth != null && (root.child('users').child(auth.token.email.replace('.', '_')).child('role').val() === 'it_admin' || root.child('users').child(auth.token.email.replace('.', '_')).child('role').val() === 'storekeeper')",
+      ".indexOn": [
+        "date",
+        "productId",
+        "roomId"
+      ]
+    },
+    "inventory_movements": {
+      ".read": "auth != null",
+      ".write": "auth != null && (root.child('users').child(auth.token.email.replace('.', '_')).child('role').val() === 'it_admin' || root.child('users').child(auth.token.email.replace('.', '_')).child('role').val() === 'storekeeper')",
+      ".indexOn": [
+        "date"
+      ]
+    },
+    "material_documents": {
+      ".read": "auth != null",
+      ".write": "auth != null && (root.child('users').child(auth.token.email.replace('.', '_')).child('role').val() === 'it_admin' || root.child('users').child(auth.token.email.replace('.', '_')).child('role').val() === 'storekeeper')",
+      ".indexOn": [
+        "date",
+        "type",
+        "createdBy"
+      ]
+    },
+    "system": {
+      ".read": "auth != null",
+      ".write": "auth != null && root.child('users').child(auth.token.email.replace('.', '_')).child('role').val() === 'it_admin'"
+    },
+    "ledger": {
+      ".read": "auth != null",
+      ".write": "auth != null && (root.child('users').child(auth.token.email.replace('.', '_')).child('role').val() === 'it_admin' || root.child('users').child(auth.token.email.replace('.', '_')).child('role').val() === 'admin' || root.child('users').child(auth.token.email.replace('.', '_')).child('role').val() === 'SALESPERSON')"
+    },
+    "$other": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    }
+  }
+}

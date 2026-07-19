@@ -1,0 +1,147 @@
+﻿{
+    "hosting":  [
+                    {
+                        "site":  "automation-suit-cece7",
+                        "public":  "dist",
+                        "ignore":  [
+                                       "firebase.json",
+                                       "**/.*",
+                                       "**/node_modules/**"
+                                   ],
+                        "rewrites":  [
+                                         {
+                                             "source":  "**",
+                                             "destination":  "/index.html"
+                                         }
+                                     ],
+                        "headers":  [
+                                        {
+                                            "source":  "/**/index.html",
+                                            "headers":  [
+                                                            {
+                                                                "key":  "Cache-Control",
+                                                                "value":  "no-cache, no-store, must-revalidate"
+                                                            }
+                                                        ]
+                                        },
+                                        {
+                                            "source":  "sw.js",
+                                            "headers":  [
+                                                            {
+                                                                "key":  "Cache-Control",
+                                                                "value":  "no-cache, no-store, must-revalidate"
+                                                            }
+                                                        ]
+                                        }
+                                    ]
+                    },
+                    {
+                        "site":  "automation-suit-salesman",
+                        "public":  "dist",
+                        "ignore":  [
+                                       "firebase.json",
+                                       "**/.*",
+                                       "**/node_modules/**"
+                                   ],
+                        "rewrites":  [
+                                         {
+                                             "source":  "**",
+                                             "destination":  "/index.html"
+                                         }
+                                     ],
+                        "headers":  [
+                                        {
+                                            "source":  "/**/index.html",
+                                            "headers":  [
+                                                            {
+                                                                "key":  "Cache-Control",
+                                                                "value":  "no-cache, no-store, must-revalidate"
+                                                            }
+                                                        ]
+                                        },
+                                        {
+                                            "source":  "sw.js",
+                                            "headers":  [
+                                                            {
+                                                                "key":  "Cache-Control",
+                                                                "value":  "no-cache, no-store, must-revalidate"
+                                                            }
+                                                        ]
+                                        }
+                                    ]
+                    },
+                    {
+                        "site":  "automation-suit-scanner",
+                        "public":  "dist",
+                        "ignore":  [
+                                       "firebase.json",
+                                       "**/.*",
+                                       "**/node_modules/**"
+                                   ],
+                        "rewrites":  [
+                                         {
+                                             "source":  "**",
+                                             "destination":  "/index.html"
+                                         }
+                                     ],
+                        "headers":  [
+                                        {
+                                            "source":  "/**/index.html",
+                                            "headers":  [
+                                                            {
+                                                                "key":  "Cache-Control",
+                                                                "value":  "no-cache, no-store, must-revalidate"
+                                                            }
+                                                        ]
+                                        },
+                                        {
+                                            "source":  "sw.js",
+                                            "headers":  [
+                                                            {
+                                                                "key":  "Cache-Control",
+                                                                "value":  "no-cache, no-store, must-revalidate"
+                                                            }
+                                                        ]
+                                        }
+                                    ]
+                    },
+                    {
+                        "site":  "orderscanner-app",
+                        "public":  "dist",
+                        "ignore":  [
+                                       "firebase.json",
+                                       "**/.*",
+                                       "**/node_modules/**"
+                                   ],
+                        "rewrites":  [
+                                         {
+                                             "source":  "**",
+                                             "destination":  "/index.html"
+                                         }
+                                     ],
+                        "headers":  [
+                                        {
+                                            "source":  "/**/index.html",
+                                            "headers":  [
+                                                            {
+                                                                "key":  "Cache-Control",
+                                                                "value":  "no-cache, no-store, must-revalidate"
+                                                            }
+                                                        ]
+                                        },
+                                        {
+                                            "source":  "sw.js",
+                                            "headers":  [
+                                                            {
+                                                                "key":  "Cache-Control",
+                                                                "value":  "no-cache, no-store, must-revalidate"
+                                                            }
+                                                        ]
+                                        }
+                                    ]
+                    }
+                ],
+    "storage":  {
+                    "rules":  "storage.rules"
+                }
+}
