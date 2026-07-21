@@ -17,8 +17,8 @@ interface CustomUser {
     inventoryAdmin?: boolean;
     storekeeperMobile?: boolean;
     scanner?: boolean;
+    scannerMobile?: boolean;
     reports?: boolean;
-    exportHub?: boolean;
     poInvoice?: boolean;
     requestForms?: boolean;
     reminders?: boolean;
@@ -26,14 +26,8 @@ interface CustomUser {
     profile?: boolean;
     appHub?: boolean;
     centralReports?: boolean;
-    inventoryApp?: boolean;
-    extensions?: boolean;
     pythonDesktop?: boolean;
     salesmanMobile?: boolean;
-    scannerAdmin?: boolean;
-    scannerMobile?: boolean;
-    spreadsheetWorkspace?: boolean;
-    automationTools?: boolean;
     jobPortal?: boolean;
   };
   applicationRoles?: {
@@ -43,7 +37,6 @@ interface CustomUser {
     storekeeperMobile?: string;
     scanner?: string;
     reports?: string;
-    exportHub?: string;
     poInvoice?: string;
     requestForms?: string;
     reminders?: string;
@@ -51,14 +44,9 @@ interface CustomUser {
     profile?: string;
     appHub?: string;
     centralReports?: string;
-    inventoryApp?: string;
-    extensions?: string;
     pythonDesktop?: string;
     salesmanMobile?: string;
-    scannerAdmin?: string;
     scannerMobile?: string;
-    spreadsheetWorkspace?: string;
-    automationTools?: string;
     jobPortal?: string;
   };
   permissions?: {
@@ -92,6 +80,9 @@ export default function UserManagement({ userKey, onBack, currentUserEmail, isSy
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'details' | 'apps' | 'roles' | 'permissions' | 'password' | 'advanced'>('details');
   const [saving, setSaving] = useState(false);
+  const [newPermissionKey, setNewPermissionKey] = useState('');
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showDisableModal, setShowDisableModal] = useState(false);
   const { addToast } = useToast();
 
   useEffect(() => {
@@ -104,6 +95,7 @@ export default function UserManagement({ userKey, onBack, currentUserEmail, isSy
     return () => unsubscribe();
   }, [userKey]);
 
+  
   const handleSendPasswordReset = async () => {
     if (!user?.email) {
       addToast('error', 'User email is required.');
@@ -118,33 +110,49 @@ export default function UserManagement({ userKey, onBack, currentUserEmail, isSy
     }
   };
 
-  const handleForcePasswordChange = () => {
+
+  
+  const handleForcePasswordChange = async () => {
     if (!user) return;
-    if (!window.confirm('Force this user to change their password on next login?')) {
-      return;
+    try {
+      await update(ref(database, `users/${userKey}`), { forcePasswordChange: true });
+      setUser({ ...user, forcePasswordChange: true });
+      addToast('success', 'User will be required to change password on next login.');
+    } catch(err) {
+      addToast('error', 'Unable to update password policy.');
     }
-    setUser({ ...user, forcePasswordChange: true });
-    addToast('success', 'User will be required to change password on next login.');
   };
 
-  const handleLockAccount = () => {
+
+  
+  const handleLockAccount = async () => {
     if (!user) return;
     if (isSystemAdmin && user.email === currentUserEmail) {
       addToast('error', 'System Admin cannot lock themselves.');
       return;
     }
-    if (!window.confirm('Lock this user account? They will not be able to log in.')) {
-      return;
+    try {
+      await update(ref(database, `users/${userKey}`), { locked: true });
+      setUser({ ...user, locked: true });
+      addToast('success', 'User account locked successfully.');
+    } catch(err) {
+      addToast('error', 'Unable to lock account.');
     }
-    setUser({ ...user, locked: true });
-    addToast('success', 'User account locked successfully.');
   };
 
-  const handleUnlockAccount = () => {
+  const handleUnlockAccount = async () => {
     if (!user) return;
-    setUser({ ...user, locked: false });
-    addToast('success', 'User account unlocked successfully.');
+    try {
+      await update(ref(database, `users/${userKey}`), { locked: false });
+      setUser({ ...user, locked: false });
+      addToast('success', 'User account unlocked successfully.');
+    } catch(err) {
+      addToast('error', 'Unable to unlock account.');
+    }
   };
+
+
+  
 
   const handleSave = async () => {
     if (!user) return;
@@ -189,31 +197,53 @@ export default function UserManagement({ userKey, onBack, currentUserEmail, isSy
     });
   };
 
+  
   const handleDisableUser = async () => {
     if (!user) return;
     
     // Prevent System Admin from disabling themselves
     if (isSystemAdmin && user.email === currentUserEmail && !user.disabled) {
       addToast('error', 'System Admin cannot disable themselves.');
+      setShowDisableModal(false);
       return;
     }
     
     const isDisabling = !user.disabled;
-    if (!window.confirm(isDisabling ? 'Are you sure you want to disable this user? They will not be able to log in.' : 'Are you sure you want to enable this user?')) {
+    
+    try {
+      await update(ref(database, `users/${userKey}`), { disabled: isDisabling });
+      setUser({ ...user, disabled: isDisabling });
+      addToast('success', isDisabling ? 'User disabled successfully.' : 'User enabled successfully.');
+      setShowDisableModal(false);
+    } catch (err) {
+      console.error('Error toggling user status:', err);
+      addToast('error', 'Unable to update user status.');
+      setShowDisableModal(false);
+    }
+  };
+
+
+  const handleDeleteUser = async () => {
+    if (!user) return;
+    if (isSystemAdmin && user.email === currentUserEmail) {
+      addToast('error', 'System Admin cannot delete themselves.');
+      setShowDeleteModal(false);
       return;
     }
     
     try {
-      // Import update and ref at the top if needed, they should be there since onValue and set are used.
-      // Wait, let's just use the direct reference
-      await set(ref(database, `users/${userKey}/disabled`), isDisabling);
-      setUser({ ...user, disabled: isDisabling });
-      addToast('success', isDisabling ? 'User disabled successfully.' : 'User enabled successfully.');
+      const dbRef = ref(database, `users/${userKey}`);
+      await update(dbRef, { deleted: true, disabled: true, role: 'deleted' });
+      addToast('success', 'User profile deleted successfully. (Note: Firebase Auth deletion must be handled manually from Firebase Console).');
+      setShowDeleteModal(false);
+      onBack();
     } catch (err) {
-      console.error('Error toggling user status:', err);
-      addToast('error', 'Unable to update user status.');
+      console.error('Error deleting user:', err);
+      addToast('error', 'Unable to delete user.');
+      setShowDeleteModal(false);
     }
   };
+
 
   if (loading) {
     return (
@@ -277,7 +307,7 @@ export default function UserManagement({ userKey, onBack, currentUserEmail, isSy
             <div className="flex gap-3">
               {!isSystemAdmin || user.email !== currentUserEmail ? (
                 <button
-                  onClick={handleDisableUser}
+                  onClick={() => setShowDisableModal(true)}
                   className={`px-4 py-2 rounded-lg font-semibold transition-colors ${
                     user.disabled 
                       ? 'bg-emerald-100 hover:bg-emerald-200 text-emerald-700' 
@@ -484,17 +514,32 @@ export default function UserManagement({ userKey, onBack, currentUserEmail, isSy
 
             {activeTab === 'permissions' && (
               <div className="space-y-4">
-                <p className="text-slate-600">Fine-grained permissions for each application.</p>
-                {Object.entries(user.permissions || {}).map(([perm, value]) => (
-                  <div key={perm} className="flex items-center justify-between p-4 bg-slate-50 rounded-lg">
-                    <span className="font-medium text-slate-900 capitalize">{perm.replace(/_/g, ' ')}</span>
-                    <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                      value ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-600'
-                    }`}>
-                      {value ? 'Granted' : 'Denied'}
-                    </span>
-                  </div>
-                ))}
+                <p className="text-slate-600">Fine-grained permissions for each enabled application.</p>
+                {Object.entries(user.permissions || {}).map(([perm, value]) => {
+                  // Only show permissions for enabled applications
+                  const appKey = perm.includes('sales') ? 'salesAdmin' : 
+                                 perm.includes('inventory') ? 'inventoryAdmin' : 
+                                 perm.includes('scanner') ? 'scanner' : 
+                                 perm.includes('report') ? 'reports' : null;
+                  
+                  if (appKey && !user.applicationAccess?.[appKey]) {
+                    return null;
+                  }
+                  
+                  return (
+                    <div key={perm} className="flex items-center justify-between p-4 bg-slate-50 rounded-lg">
+                      <span className="font-medium text-slate-900 capitalize">{perm.replace(/_/g, ' ')}</span>
+                      <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                        value ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-600'
+                      }`}>
+                        {value ? 'Granted' : 'Denied'}
+                      </span>
+                    </div>
+                  );
+                })}
+                {Object.keys(user.permissions || {}).length === 0 && (
+                  <p className="text-slate-500 text-sm italic">No permissions configured. Enable applications first to see their permissions.</p>
+                )}
               </div>
             )}
 
@@ -508,7 +553,20 @@ export default function UserManagement({ userKey, onBack, currentUserEmail, isSy
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="col-span-1 md:col-span-2 mb-4 bg-white p-4 rounded-lg border border-slate-200">
+                      <label className="block text-sm font-bold text-slate-700 mb-1.5">User Database Password</label>
+                      <input
+                        type="text"
+                        value={user?.password || ''}
+                        onChange={(e) => setUser(prev => prev ? { ...prev, password: e.target.value } : prev)}
+                        className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-600 outline-none text-slate-800"
+                        placeholder="Current DB password"
+                      />
+                      <p className="text-xs text-slate-500 mt-2">Note: Changing this only updates the database record. It doesn't bypass Firebase Auth unless a custom auth flow uses it.</p>
+                    </div>
+
                   <button
                     onClick={handleSendPasswordReset}
                     className="p-4 bg-slate-50 hover:bg-slate-100 rounded-lg text-left transition-colors"
@@ -538,7 +596,7 @@ export default function UserManagement({ userKey, onBack, currentUserEmail, isSy
                     <p className="text-sm text-slate-500">{user.locked ? 'Unlock a locked user account' : 'Temporarily lock user account'}</p>
                   </button>
                   <button
-                    onClick={handleDisableUser}
+                    onClick={() => setShowDisableModal(true)}
                     className={`p-4 rounded-lg text-left transition-colors ${
                       user.disabled ? 'bg-emerald-50 hover:bg-emerald-100' : 'bg-red-50 hover:bg-red-100'
                     }`}
@@ -615,7 +673,55 @@ export default function UserManagement({ userKey, onBack, currentUserEmail, isSy
             )}
           </div>
         </div>
-      </div>
+      
+      {/* Delete Modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-xl">
+            <h3 className="text-xl font-bold text-slate-900 mb-2">Delete User Account</h3>
+            <p className="text-slate-600 mb-6">Are you sure you want to delete this user? This action cannot be undone. Firebase Auth record will need to be deleted manually.</p>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => setShowDeleteModal(false)}
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg font-medium transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteUser}
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors"
+              >
+                Yes, Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Disable Modal */}
+      {showDisableModal && (
+        <div className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-xl">
+            <h3 className="text-xl font-bold text-slate-900 mb-2">{user.disabled ? 'Enable User Account' : 'Disable User Account'}</h3>
+            <p className="text-slate-600 mb-6">{user.disabled ? 'Are you sure you want to enable this user?' : 'Are you sure you want to disable this user? They will not be able to log in.'}</p>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => setShowDisableModal(false)}
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg font-medium transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDisableUser}
+                className={`px-4 py-2 text-white rounded-lg font-medium transition-colors ${user.disabled ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-red-600 hover:bg-red-700'}`}
+              >
+                {user.disabled ? 'Yes, Enable' : 'Yes, Disable'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+</div>
     </div>
   );
 }

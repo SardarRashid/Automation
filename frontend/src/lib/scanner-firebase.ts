@@ -32,11 +32,14 @@ export const FirebaseAPI = {
   /**
    * Fetch user data from Realtime Database
    */
-  async getUserProfile(email: string) {
+  async getUserProfile(email: string, idToken?: string) {
     // Escape email to match RTDB keys (e.g. user@example.com -> user@example_com)
-    const dbKey = email.toLowerCase().replace(/[.#$\[\]]/g, '_');
+    const dbKey = email.toLowerCase().replace('.', '_');
     try {
-      const response = await fetch(`${DB_URL}/users/${dbKey}.json`);
+      const url = idToken 
+        ? `${DB_URL}/users/${dbKey}.json?auth=${idToken}`
+        : `${DB_URL}/users/${dbKey}.json`;
+      const response = await fetch(url);
       const data = await response.json();
       if (!response.ok) {
         throw new Error("Failed to fetch user profile");
@@ -70,10 +73,13 @@ export const FirebaseAPI = {
   /**
    * Update or Create user data in Realtime Database
    */
-  async updateUserProfile(email: string, profileData: any) {
-    const dbKey = email.toLowerCase().replace(/[.#$\[\]]/g, '_');
+  async updateUserProfile(email: string, profileData: any, idToken?: string) {
+    const dbKey = email.toLowerCase().replace('.', '_');
     try {
-      const response = await fetch(`${DB_URL}/users/${dbKey}.json`, {
+      const url = idToken 
+        ? `${DB_URL}/users/${dbKey}.json?auth=${idToken}`
+        : `${DB_URL}/users/${dbKey}.json`;
+      const response = await fetch(url, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(profileData)

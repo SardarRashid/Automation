@@ -1,4 +1,4 @@
-import { Shield, Smartphone, Warehouse, Activity, FileText, Puzzle, Settings, Monitor, Bell, StickyNote, FileSignature, Scan } from 'lucide-react';
+import { Shield, Smartphone, Warehouse, Activity, FileText, Puzzle, Settings, Monitor, Bell, StickyNote, FileSignature, Scan, Briefcase } from 'lucide-react';
 
 export interface Application {
   id: string;
@@ -13,28 +13,7 @@ export interface Application {
 }
 
 export const APPLICATIONS: Application[] = [
-  {
-    id: 'job_portal',
-    displayName: 'Job Portal',
-    icon: Puzzle,
-    route: 'job_portal',
-    applicationAccessKey: 'jobPortal',
-    category: 'extensions',
-    visible: true,
-    description: 'Recruitment and Job Application Portal',
-    externalUrl: 'https://automation-suit-jobortal.web.app'
-  },
-  {
-    id: 'inventory_mobile',
-    displayName: 'Inventory Mobile',
-    icon: Smartphone,
-    route: 'inventory_mobile',
-    applicationAccessKey: 'inventoryMobile',
-    category: 'inventory',
-    visible: false,
-    description: 'Mobile interface for inventory stocktaking',
-    externalUrl: 'https://automation-suit-inventory.web.app'
-  },
+  // --- Admin ---
   {
     id: 'main_admin',
     displayName: 'Main Admin Panel',
@@ -45,6 +24,8 @@ export const APPLICATIONS: Application[] = [
     visible: true,
     description: 'Central control center for system administration'
   },
+  
+  // --- Sales ---
   {
     id: 'sales_admin',
     displayName: 'Sales Admin',
@@ -56,6 +37,28 @@ export const APPLICATIONS: Application[] = [
     description: 'Sales management and administration'
   },
   {
+    id: 'salesman_mobile',
+    displayName: 'Salesman Mobile',
+    icon: Smartphone,
+    route: 'salesman_mobile',
+    applicationAccessKey: 'salesmanMobile',
+    category: 'sales',
+    visible: false, // Mobile app specific
+    description: 'Mobile sales application for salesmen'
+  },
+  {
+    id: 'central_reports',
+    displayName: 'Central Reports',
+    icon: FileText,
+    route: 'central_reports',
+    applicationAccessKey: 'centralReports',
+    category: 'sales',
+    visible: true,
+    description: 'Centralized reporting hub'
+  },
+
+  // --- Inventory ---
+  {
     id: 'inventory_admin',
     displayName: 'Inventory Admin',
     icon: Warehouse,
@@ -65,6 +68,40 @@ export const APPLICATIONS: Application[] = [
     visible: true,
     description: 'Inventory management and control'
   },
+  {
+    id: 'storekeeper_mobile',
+    displayName: 'Storekeeper Mobile',
+    icon: Smartphone,
+    route: 'inventory_app',
+    applicationAccessKey: 'storekeeperMobile',
+    category: 'inventory',
+    visible: false, // Mobile app specific
+    description: 'Mobile inventory management for storekeepers'
+  },
+
+  // --- Scanner ---
+  {
+    id: 'scanner',
+    displayName: 'Scanner',
+    icon: Activity,
+    route: 'scanner_tracking',
+    applicationAccessKey: 'scanner',
+    category: 'scanner',
+    visible: true,
+    description: 'Barcode scanner and tracking'
+  },
+  {
+    id: 'scanner_mobile',
+    displayName: 'Scanner Mobile',
+    icon: Scan,
+    route: 'scanner_tracking',
+    applicationAccessKey: 'scannerMobile',
+    category: 'scanner',
+    visible: false,
+    description: 'Mobile scanner application'
+  },
+
+  // --- Productivity ---
   {
     id: 'reports',
     displayName: 'Report Engine',
@@ -116,6 +153,18 @@ export const APPLICATIONS: Application[] = [
     description: 'Important notes and memos'
   },
   {
+    id: 'profile',
+    displayName: 'Profile Settings',
+    icon: Settings,
+    route: 'profile',
+    applicationAccessKey: 'profile',
+    category: 'productivity',
+    visible: true,
+    description: 'User profile and settings'
+  },
+
+  // --- Extensions & Apps ---
+  {
     id: 'app_hub',
     displayName: 'Apps & Extensions',
     icon: Puzzle,
@@ -126,105 +175,15 @@ export const APPLICATIONS: Application[] = [
     description: 'Application hub and extensions'
   },
   {
-    id: 'central_reports',
-    displayName: 'Central Reports',
-    icon: FileText,
-    route: 'central_reports',
-    applicationAccessKey: 'centralReports',
-    category: 'sales',
-    visible: false,
-    description: 'Centralized reporting hub'
-  },
-  {
-    id: 'profile',
-    displayName: 'Profile Settings',
-    icon: Settings,
-    route: 'profile',
-    applicationAccessKey: 'profile',
-    category: 'productivity',
-    visible: true,
-    description: 'User profile and settings'
-  },
-  // Hidden applications (moved to Apps & Extensions page)
-  {
-    id: 'salesman_mobile',
-    displayName: 'Salesman Mobile',
-    icon: Smartphone,
-    route: 'salesman_admin',
-    applicationAccessKey: 'salesmanMobile',
-    category: 'sales',
-    visible: false,
-    description: 'Mobile sales application for salesmen'
-  },
-  {
-    id: 'storekeeper_mobile',
-    displayName: 'Storekeeper Mobile',
-    icon: Smartphone,
-    route: 'inventory_app',
-    applicationAccessKey: 'storekeeperMobile',
-    category: 'inventory',
-    visible: false,
-    description: 'Mobile inventory management for storekeepers'
-  },
-  {
-    id: 'scanner',
-    displayName: 'Scanner',
-    icon: Activity,
-    route: 'scanner_tracking',
-    applicationAccessKey: 'scanner',
-    category: 'scanner',
-    visible: false,
-    description: 'Barcode scanner and tracking'
-  },
-  {
-    id: 'scanner_admin',
-    displayName: 'Scanner Admin',
-    icon: Scan,
-    route: 'scanner_tracking',
-    applicationAccessKey: 'scannerAdmin',
-    category: 'scanner',
-    visible: false,
-    description: 'Scanner administration and management'
-  },
-  {
-    id: 'scanner_mobile',
-    displayName: 'Scanner Mobile',
-    icon: Scan,
-    route: 'scanner_tracking',
-    applicationAccessKey: 'scannerMobile',
-    category: 'scanner',
-    visible: false,
-    description: 'Mobile scanner application'
-  },
-  {
-    id: 'export_hub',
-    displayName: 'Export Hub',
-    icon: FileText,
-    route: 'reports',
-    applicationAccessKey: 'exportHub',
-    category: 'productivity',
-    visible: false,
-    description: 'Export data and reports'
-  },
-  {
-    id: 'inventory_app',
-    displayName: 'Inventory',
-    icon: Warehouse,
-    route: 'inventory_app',
-    applicationAccessKey: 'inventoryApp',
-    category: 'inventory',
-    visible: false,
-    description: 'Inventory application'
-  },
-  {
-    id: 'extensions',
-    displayName: 'Extensions',
-    icon: Puzzle,
-    route: 'app_hub',
-    applicationAccessKey: 'extensions',
+    id: 'job_portal',
+    displayName: 'Job Portal',
+    icon: Briefcase,
+    route: 'job_portal',
+    applicationAccessKey: 'jobPortal',
     category: 'extensions',
-    visible: false,
-    description: 'System extensions'
+    visible: true,
+    description: 'Recruitment and Job Application Portal',
+    externalUrl: 'https://automation-suit-jobortal.web.app'
   },
   {
     id: 'python_desktop',
@@ -235,26 +194,6 @@ export const APPLICATIONS: Application[] = [
     category: 'extensions',
     visible: false,
     description: 'Python desktop application integration'
-  },
-  {
-    id: 'spreadsheet_workspace',
-    displayName: 'Spreadsheet Workspace',
-    icon: FileText,
-    route: 'reports',
-    applicationAccessKey: 'spreadsheetWorkspace',
-    category: 'productivity',
-    visible: false,
-    description: 'Spreadsheet workspace and data analysis'
-  },
-  {
-    id: 'automation_tools',
-    displayName: 'Automation Tools',
-    icon: Activity,
-    route: 'app_hub',
-    applicationAccessKey: 'automationTools',
-    category: 'extensions',
-    visible: false,
-    description: 'Automation and workflow tools'
   }
 ];
 

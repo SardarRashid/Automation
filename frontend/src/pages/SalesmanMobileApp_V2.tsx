@@ -56,11 +56,11 @@ export default function SalesmanMobileApp_V2({ onBack }: { onBack: () => void })
   useEffect(() => {
     let loaded = 0;
     const checkLoaded = () => { loaded++; if (loaded >= 5) setIsLoading(false); };
-    const unsubCust = onValue(ref(database, 'customers'), (snap) => { setCustomers(snap.exists() ? Object.values(snap.val()) : []); checkLoaded(); });
-    const unsubPay = onValue(ref(database, 'payments'), (snap) => { setPayments(snap.exists() ? Object.values(snap.val()) : []); checkLoaded(); });
-    const unsubOrd = onValue(ref(database, 'orders'), (snap) => { setOrders(snap.exists() ? Object.values(snap.val()) : []); checkLoaded(); });
-    const unsubProd = onValue(ref(database, 'products'), (snap) => { setProducts(snap.exists() ? Object.values(snap.val()) : []); checkLoaded(); });
-    const unsubRet = onValue(ref(database, 'sales_returns'), (snap) => { setReturns(snap.exists() ? Object.values(snap.val()) : []); checkLoaded(); });
+    const unsubCust = onValue(ref(database, 'customers'), (snap) => { setCustomers(snap.exists() ? Object.values(snap.val()) : []); checkLoaded(); }, (err) => { console.error(err); checkLoaded(); });
+    const unsubPay = onValue(ref(database, 'payments'), (snap) => { setPayments(snap.exists() ? Object.values(snap.val()) : []); checkLoaded(); }, (err) => { console.error(err); checkLoaded(); });
+    const unsubOrd = onValue(ref(database, 'orders'), (snap) => { setOrders(snap.exists() ? Object.values(snap.val()) : []); checkLoaded(); }, (err) => { console.error(err); checkLoaded(); });
+    const unsubProd = onValue(ref(database, 'products'), (snap) => { setProducts(snap.exists() ? Object.values(snap.val()) : []); checkLoaded(); }, (err) => { console.error(err); checkLoaded(); });
+    const unsubRet = onValue(ref(database, 'sales_returns'), (snap) => { setReturns(snap.exists() ? Object.values(snap.val()) : []); checkLoaded(); }, (err) => { console.error(err); checkLoaded(); });
     return () => { unsubCust(); unsubPay(); unsubOrd(); unsubProd(); unsubRet(); };
   }, []);
 

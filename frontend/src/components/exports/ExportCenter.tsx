@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import ExportTemplateBuilder from './ExportTemplateBuilder';
 import { FileSpreadsheet, FileText, Download, Loader2, TableProperties, Users, Package, TrendingUp, Settings2 } from 'lucide-react';
-import type { Order, Customer, Product, User } from '../../pages/SalesmanAdmin_V1';
+import type { Order, Customer, Product, User } from '../../pages/SalesmanAdmin';
 import { 
   generateWholesaleMarketSheet, generateCustomerOrderSheet, generateDailyOrdersReport, 
   generateProductSalesReport, generateCustomerSummaryReport, generateSalesmanPerformanceReport 

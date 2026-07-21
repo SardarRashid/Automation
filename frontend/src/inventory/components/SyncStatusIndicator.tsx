@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 
 import { CloudLightning, Database, RefreshCw, AlertCircle } from "lucide-react";
-import { subscribeToSyncStatus } from "../services/dbService";
+import { subscribeToSyncStatus, syncOfflineData, getPendingSyncCount } from "../services/dbService";
 import type { SyncStatusType } from "../services/dbService";
 
 interface SyncStatusIndicatorProps {
@@ -13,13 +13,26 @@ export default function SyncStatusIndicator({ className = "", size = "md" }: Syn
   const [syncStatus, setSyncStatus] = useState<SyncStatusType>("synced");
   const [online, setOnline] = useState(typeof navigator !== "undefined" ? navigator.onLine : true);
 
-  // Monitor window network status
+  const [pendingCount, setPendingCount] = useState(0);
+
+  // Monitor window network status and run sync on reconnect
   useEffect(() => {
-    const handleOnline = () => setOnline(true);
+    const handleOnline = () => {
+      setOnline(true);
+      syncOfflineData();
+    };
     const handleOffline = () => setOnline(false);
 
     window.addEventListener("online", handleOnline);
     window.addEventListener("offline", handleOffline);
+
+    // Initial check on mount: If we are online but have pending offline items (e.g. from previous session)
+    if (navigator.onLine) {
+      const count = getPendingSyncCount();
+      if (count > 0) {
+        syncOfflineData();
+      }
+    }
 
     return () => {
       window.removeEventListener("online", handleOnline);
@@ -55,10 +68,11 @@ export default function SyncStatusIndicator({ className = "", size = "md" }: Syn
     text = "SYNCING TO CLOUD...";
     dotColor = "bg-blue-400";
   } else if (syncStatus === "pending_offline") {
-    // Save failed or is pending offline queue resolution
+    const count = getPendingSyncCount();
+    if (count > 0 && count !== pendingCount) setPendingCount(count);
     badgeColor = "bg-orange-955/70 text-orange-300 border-orange-600/40";
     icon = <AlertCircle className="w-3.5 h-3.5 shrink-0 text-orange-400" />;
-    text = "PENDING CLOUD SYNC";
+    text = count > 0 ? `${count} PENDING ITEMS` : "PENDING CLOUD SYNC";
     dotColor = "bg-orange-400 animate-pulse";
   } else {
     // Fully synced and online

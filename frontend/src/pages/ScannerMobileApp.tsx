@@ -153,7 +153,7 @@ export default function App() {
     setError('');
     try {
       const authData = await FirebaseAPI.signIn(email, password);
-      const profData = await FirebaseAPI.getUserProfile(email);
+      const profData = await FirebaseAPI.getUserProfile(email, authData.idToken);
       
       if (profData?.app_role !== 'scanner' && profData?.role !== 'scanner' && !profData?.allowedApps?.scanner) {
           throw new Error("Access Denied: You are not registered as a Scanner User.");

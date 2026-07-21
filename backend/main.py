@@ -8,7 +8,16 @@ import tempfile
 import zipfile
 import json
 import requests
+import re
 from typing import Optional
+
+def secure_filename(filename: str) -> str:
+    if not filename:
+        return "uploaded_file"
+    filename = os.path.basename(filename.replace("\", "/"))
+    filename = re.sub(r"[^a-zA-Z0-9_.-]", "_", filename)
+    return filename or "uploaded_file"
+
 
 from processors import (
     ReportProcessor,
@@ -73,17 +82,17 @@ async def process_report(
 ):
     temp_dir = tempfile.mkdtemp()
     
-    sap_path = os.path.join(temp_dir, sap_file.filename)
+    sap_path = os.path.join(temp_dir, secure_filename(sap_file.filename))
     with open(sap_path, "wb") as f:
         f.write(await sap_file.read())
         
-    log_path = os.path.join(temp_dir, loginext_file.filename)
+    log_path = os.path.join(temp_dir, secure_filename(loginext_file.filename))
     with open(log_path, "wb") as f:
         f.write(await loginext_file.read())
         
     rem_path = None
     if remaining_file:
-        rem_path = os.path.join(temp_dir, remaining_file.filename)
+        rem_path = os.path.join(temp_dir, secure_filename(remaining_file.filename))
         with open(rem_path, "wb") as f:
             f.write(await remaining_file.read())
             
@@ -117,11 +126,11 @@ async def process_destruction(
 ):
     temp_dir = tempfile.mkdtemp()
     
-    sap_path = os.path.join(temp_dir, sap_file.filename)
+    sap_path = os.path.join(temp_dir, secure_filename(sap_file.filename))
     with open(sap_path, "wb") as f:
         f.write(await sap_file.read())
         
-    dest_path = os.path.join(temp_dir, destruction_file.filename)
+    dest_path = os.path.join(temp_dir, secure_filename(destruction_file.filename))
     with open(dest_path, "wb") as f:
         f.write(await destruction_file.read())
             
@@ -158,13 +167,13 @@ async def process_invoice(
 ):
     temp_dir = tempfile.mkdtemp()
     
-    po_path = os.path.join(temp_dir, po_file.filename)
+    po_path = os.path.join(temp_dir, secure_filename(po_file.filename))
     with open(po_path, "wb") as f:
         f.write(await po_file.read())
         
     profile = json.loads(profile_settings)
     if master_file:
-        master_path = os.path.join(temp_dir, master_file.filename)
+        master_path = os.path.join(temp_dir, secure_filename(master_file.filename))
         with open(master_path, "wb") as f:
             f.write(await master_file.read())
     else:
@@ -230,13 +239,13 @@ async def process_ecom_invoice(
 ):
     temp_dir = tempfile.mkdtemp()
     
-    po_path = os.path.join(temp_dir, po_file.filename)
+    po_path = os.path.join(temp_dir, secure_filename(po_file.filename))
     with open(po_path, "wb") as f:
         f.write(await po_file.read())
         
     profile = json.loads(profile_settings)
     if master_file:
-        master_path = os.path.join(temp_dir, master_file.filename)
+        master_path = os.path.join(temp_dir, secure_filename(master_file.filename))
         with open(master_path, "wb") as f:
             f.write(await master_file.read())
     else:
@@ -303,13 +312,13 @@ async def process_transfer_order(
 ):
     temp_dir = tempfile.mkdtemp()
     
-    to_path = os.path.join(temp_dir, to_file.filename)
+    to_path = os.path.join(temp_dir, secure_filename(to_file.filename))
     with open(to_path, "wb") as f:
         f.write(await to_file.read())
         
     profile = json.loads(profile_settings)
     if master_file:
-        master_path = os.path.join(temp_dir, master_file.filename)
+        master_path = os.path.join(temp_dir, secure_filename(master_file.filename))
         with open(master_path, "wb") as f:
             f.write(await master_file.read())
     else:

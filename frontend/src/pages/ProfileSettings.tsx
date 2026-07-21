@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Save, Settings2, Folder, CloudUpload, FileSpreadsheet, Loader2, CheckCircle2 } from 'lucide-react';
+import { Save, Settings2, Folder, CloudUpload, FileSpreadsheet, Loader2, CheckCircle2, Key } from 'lucide-react';
 import { database } from '../lib/firebase';
 import { ref as dbRef, set as dbSet } from 'firebase/database';
+import { auth } from '../lib/firebase';
+import { updatePassword } from 'firebase/auth';
 import { useToast } from '../components/ui/ToastNotification';
 
 export const DEFAULT_PROFILE = {
@@ -26,6 +28,9 @@ export const DEFAULT_PROFILE = {
 export function ProfileSettings() {
   const [profile, setProfile] = useState(DEFAULT_PROFILE);
   const [uploading, setUploading] = useState<Record<string, number>>({});
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
   const { addToast } = useToast();
 
   useEffect(() => {
@@ -53,6 +58,39 @@ export function ProfileSettings() {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setProfile(prev => ({ ...prev, [name]: value }));
+  };
+
+  
+  const handleUpdatePassword = async () => {
+    if (!newPassword) {
+      addToast('error', 'Please enter a new password.');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      addToast('error', 'Passwords do not match.');
+      return;
+    }
+    if (!auth.currentUser) {
+      addToast('error', 'You must be logged in to change your password.');
+      return;
+    }
+    
+    setIsChangingPassword(true);
+    try {
+      await updatePassword(auth.currentUser, newPassword);
+      addToast('success', 'Password updated successfully!');
+      setNewPassword('');
+      setConfirmPassword('');
+    } catch (error: any) {
+      console.error("Password update error:", error);
+      if (error.code === 'auth/requires-recent-login') {
+        addToast('error', 'For security reasons, please log out and log back in before changing your password.');
+      } else {
+        addToast('error', `Failed to update password: ${error.message}`);
+      }
+    } finally {
+      setIsChangingPassword(false);
+    }
   };
 
   const handleSave = () => {
@@ -274,6 +312,48 @@ export function ProfileSettings() {
             </div>
           </div>
         </div>
+
+        <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-200 mt-8">
+          <div className="flex items-center gap-3 mb-6 pb-4 border-b border-slate-100">
+            <div className="p-3 bg-indigo-100 rounded-xl text-indigo-600">
+              <Key className="w-6 h-6" />
+            </div>
+            <h2 className="text-xl font-bold text-slate-800">Account Security</h2>
+          </div>
+          <p className="text-sm text-slate-500 mb-6">
+            Update your account password. For security reasons, you may need to have logged in recently to perform this action.
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-2xl">
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-slate-700 mb-1">New Password</label>
+              <input
+                type="password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="Enter new password"
+                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-600 focus:border-indigo-600 transition-colors bg-slate-50 text-slate-900"
+              />
+            </div>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-slate-700 mb-1">Confirm Password</label>
+              <input
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="Confirm new password"
+                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-600 focus:border-indigo-600 transition-colors bg-slate-50 text-slate-900"
+              />
+            </div>
+          </div>
+          <button
+            onClick={handleUpdatePassword}
+            disabled={isChangingPassword}
+            className="mt-2 bg-indigo-600 text-white px-6 py-2 rounded-xl hover:bg-indigo-700 transition-colors font-medium shadow-sm disabled:opacity-70 disabled:cursor-not-allowed"
+          >
+            {isChangingPassword ? 'Updating...' : 'Update Password'}
+          </button>
+        </div>
+
       </div>
     </div>
   );

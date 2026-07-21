@@ -3,6 +3,10 @@ import { database } from '../lib/firebase';
 import { ref, onValue, set, remove, update } from 'firebase/database';
 import { firebaseConfig } from '../lib/firebase';
 import UserManagement from './admin/UserManagement';
+import SystemSettings from './admin/SystemSettings';
+import AuditLog from './admin/AuditLog';
+import { useAuth } from '../contexts/AuthContext';
+import { useToast } from '../components/ui/ToastNotification';
 import { 
   LayoutDashboard, Users, ShieldAlert, Key, Clock, AppWindow, 
   Puzzle, Activity, Settings, Bell, X, UserPlus, 
@@ -61,6 +65,7 @@ export interface SystemPermission {
 }
 
 export default function AdminPanel() {
+  const { user: authUser, isSystemAdmin } = useAuth();
   const [users, setUsers] = useState<Record<string, CustomUser>>({});
   
   // System States
@@ -77,6 +82,7 @@ export default function AdminPanel() {
   const [slideoverTab, setSlideoverTab] = useState<'overview' | 'apps' | 'roles' | 'activity'>('apps');
   const [isAddUserModalOpen, setIsAddUserModalOpen] = useState(false);
     const [stagedChanges, setStagedChanges] = useState<Record<string, CustomUser>>({});
+  const { addToast } = useToast();
   
   // Modals state for system config
   const [isAddSystemModalOpen, setIsAddSystemModalOpen] = useState<{type: 'app' | 'extension' | 'role' | 'permission', open: boolean}>({type: 'app', open: false});
@@ -315,70 +321,87 @@ export default function AdminPanel() {
 
   const handleAddUser = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newUserEmail || !newUserPass) return;
+    if (!newUserEmail || !newUserPass) {
+      addToast('error', 'Please fill in all required fields');
+      return;
+    }
+    
     const userKey = newUserEmail.toLowerCase().replace(/[.#$\[\]]/g, '_');
+    
     try {
-      const signUpResponse = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${firebaseConfig.apiKey}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: newUserEmail, password: newUserPass, returnSecureToken: true })
-      });
-      const signUpData = await signUpResponse.json();
-      if (!signUpResponse.ok && signUpData.error?.message !== 'EMAIL_EXISTS') {
-        throw new Error(signUpData.error?.message || 'Failed to create Auth user');
-      }
-
-      const newAllowedApps: Record<string, boolean> = {};
-      const ALL_APPS = ['desktop', 'app', 'scanner', 'scanner_admin', 'salesman', 'extension', 'jobPortal'];
-      ALL_APPS.forEach(appKey => {
-        newAllowedApps[appKey] = (newUserRole === 'admin' || appKey === newUserRole || (newUserRole === 'manager' && appKey === 'app') || (newUserRole === 'applicant' && appKey === 'jobPortal'));
-      });
-
-      const newPermissions: Record<string, boolean> = {};
-      if (newUserRole === 'storekeeper') {
-          newPermissions.inventory_app = true;
-        }
-
-        if (newUserRole === 'manager' || newUserRole === 'admin') {
-        newPermissions.salesman_admin = true;
-        newPermissions.reports = true;
-        newPermissions.invoices = true;
-        newPermissions.request_forms = true;
-        newPermissions.inventory_app = true;
-        if (newUserRole === 'admin') {
-          newPermissions.notes = true;
-          newPermissions.reminders = true;
-          newPermissions.profile = true;
-          newPermissions.scanner_tracking = true;
-          newPermissions.app_hub = true;
-          newPermissions.inventory_admin = true;
+      // Use Firebase SDK for proper authentication
+      const { createUserWithEmailAndPassword } = await import('firebase/auth');
+      const { auth: firebaseAuth } = await import('../lib/firebase');
+      
+      let userCredential;
+      try {
+        userCredential = await createUserWithEmailAndPassword(firebaseAuth, newUserEmail, newUserPass);
+      } catch (authError: any) {
+        if (authError.code === 'auth/email-already-in-use') {
+          // Email exists in Firebase Auth, proceed to update database profile
+          console.log('User already exists in Firebase Auth, updating profile');
+        } else {
+          throw new Error(authError.message || 'Failed to create Firebase Auth user');
         }
       }
 
+      // Use modern applicationAccess structure from ApplicationRegistry
+      const { getDefaultApplicationAccess } = await import('../config/ApplicationRegistry');
+      const defaultAccess = getDefaultApplicationAccess();
+      
+      const newApplicationAccess: Record<string, boolean> = { ...defaultAccess };
+      
+      // Map role to application access (using cleaned ApplicationRegistry keys)
+      if (newUserRole === 'admin') {
+        newApplicationAccess.mainAdmin = true;
+        newApplicationAccess.salesAdmin = true;
+        newApplicationAccess.inventoryAdmin = true;
+        newApplicationAccess.scanner = true;
+        newApplicationAccess.reports = true;
+        newApplicationAccess.poInvoice = true;
+        newApplicationAccess.requestForms = true;
+        newApplicationAccess.reminders = true;
+        newApplicationAccess.notes = true;
+        newApplicationAccess.profile = true;
+        newApplicationAccess.appHub = true;
+        newApplicationAccess.centralReports = true;
+        newApplicationAccess.pythonDesktop = true;
+      } else if (newUserRole === 'manager' || newUserRole === 'app') {
+        newApplicationAccess.salesAdmin = true;
+        newApplicationAccess.inventoryAdmin = true;
+        newApplicationAccess.reports = true;
+      } else if (newUserRole === 'scanner' || newUserRole === 'scanner_admin') {
+        newApplicationAccess.scanner = true;
+        newApplicationAccess.scannerMobile = true;
+      } else if (newUserRole === 'salesman') {
+        newApplicationAccess.salesmanMobile = true;
+      } else if (newUserRole === 'storekeeper') {
+        newApplicationAccess.inventoryAdmin = true;
+        newApplicationAccess.storekeeperMobile = true;
+      }
+      
       const userData = {
         email: newUserEmail,
         password: newUserPass,
         role: newUserRole === 'manager' ? 'app' : newUserRole,
-        allowedApps: newAllowedApps,
-        permissions: newPermissions
+        applicationAccess: newApplicationAccess,
+        applicationRoles: {},
+        permissions: {},
+        disabled: false,
+        locked: false,
+        createdAt: new Date().toISOString()
       };
 
       await set(ref(database, `users/${userKey}`), userData);
-
-      // Support for Barcode Sticker Printer Extension's comma-formatted keys
-      if (newUserRole === 'extension' || newAllowedApps.extension) {
-        const extensionKey = newUserEmail.toLowerCase().replace(/\./g, ',');
-        if (extensionKey !== userKey) {
-            await set(ref(database, `users/${extensionKey}`), userData).catch(console.error);
-        }
-      }
       
       setNewUserEmail('');
       setNewUserPass('');
+      setNewUserRole('scanner');
       setIsAddUserModalOpen(false);
-      alert('User created successfully!');
+      addToast('success', 'User created successfully! No application access granted by default. Please assign applications in the Application Access tab.');
     } catch (err: any) {
-      alert('Error adding user: ' + err.message);
+      console.error('Error adding user:', err);
+      addToast('error', 'Unable to create user. Please try again.');
     }
   };
 
@@ -387,8 +410,10 @@ export default function AdminPanel() {
       try {
         await remove(ref(database, `users/${userKey}`));
         if (selectedUserKey === userKey) setSelectedUserKey(null);
+        addToast('success', 'User deleted successfully');
       } catch (err: any) {
-        alert('Error deleting user: ' + err.message);
+        console.error('Error deleting user:', err);
+        addToast('error', 'Unable to delete user. Please try again.');
       }
     }
   };
@@ -483,7 +508,7 @@ export default function AdminPanel() {
           </div>
 
           <div className="flex items-center gap-2">
-            <button className="flex items-center gap-2 px-3 py-2 rounded-lg transition-colors hover:bg-slate-800 hover:text-white text-sm whitespace-nowrap">
+            <button onClick={() => setActiveView('logs')} className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors text-sm whitespace-nowrap ${activeView === 'logs' ? 'bg-indigo-600 text-white' : 'hover:bg-slate-800 hover:text-white'}`}>
               <Activity className="w-5 h-5" /> Activity Logs
             </button>
             <button onClick={() => setActiveView('settings')} className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors text-sm whitespace-nowrap ${activeView === 'settings' ? 'bg-indigo-600 text-white' : 'hover:bg-slate-800 hover:text-white'}`}>
@@ -502,6 +527,7 @@ export default function AdminPanel() {
               {activeView === 'dashboard' && 'Dashboard'}
               {activeView === 'users' && 'Users'}
                 {activeView === 'settings' && 'Settings'}
+                {activeView === 'logs' && 'Activity Logs'}
             </h1>
           </div>
           <div className="flex items-center gap-6">

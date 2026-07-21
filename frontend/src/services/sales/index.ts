@@ -1,19 +1,18 @@
 import { database } from '../../lib/firebase';
 import { ref, push } from 'firebase/database';
 import type { Customer, Product } from '@/types/SalesmanAdmin';
-import { offlineSyncService, type SyncTransaction } from '../offlineSyncService';
+import { offlineSyncEngine } from '../OfflineSyncEngine';
 import { eventBus } from '../core/EventBus';
 import { BusinessEventType } from '../core/EventTypes';
 import type { BusinessEvent } from '../core/EventTypes';
 
 export const salesService = {
   initOfflineSync() {
-    offlineSyncService.init(async (tx: SyncTransaction) => {
-      if (tx.payload.type === 'ORDER') {
-        await this.executeSubmitOrder(tx.payload.data);
-      } else if (tx.payload.type === 'PAYMENT') {
-        await this.executeSubmitPayment(tx.payload.data);
-      }
+    offlineSyncEngine.registerHandler('sales_submitOrder', async (payload: any) => {
+      await this.executeSubmitOrder(payload);
+    });
+    offlineSyncEngine.registerHandler('sales_submitPayment', async (payload: any) => {
+      await this.executeSubmitPayment(payload);
     });
   },
 
@@ -54,10 +53,7 @@ export const salesService = {
       salesmanEmail
     };
 
-    offlineSyncService.enqueueTransaction({
-      type: 'PAYMENT',
-      data: payload
-    });
+    offlineSyncEngine.queueAction('sales_submitPayment', payload);
   },
 
   async executeSubmitPayment(data: any): Promise<void> {
@@ -111,10 +107,7 @@ export const salesService = {
       orderTotal
     };
 
-    offlineSyncService.enqueueTransaction({
-      type: 'ORDER',
-      data: payload
-    });
+    offlineSyncEngine.queueAction('sales_submitOrder', payload);
   },
 
   async executeSubmitOrder(data: any): Promise<void> {

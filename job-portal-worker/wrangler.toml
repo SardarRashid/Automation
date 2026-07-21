@@ -1,0 +1,12 @@
+name = "job-portal-worker"
+main = "src/index.ts"
+compatibility_date = "2024-12-30"
+
+# Node.js compatibility required for @google/genai and some standard libs
+compatibility_flags = ["nodejs_compat"]
+
+[observability]
+enabled = true
+
+[vars]
+# API keys should be added via `npx wrangler secret put GEMINI_API_KEY`

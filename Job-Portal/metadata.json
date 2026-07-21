@@ -1,0 +1,6 @@
+{
+  "name": "Hyper-Automation Job Agent",
+  "description": "Fully automated global job search, multi-CV optimization, skill gap detection, rejection learning, interview prediction, and secure Gmail recruiter reply tracking for ArMan.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

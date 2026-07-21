@@ -56,4 +56,92 @@ export interface Storekeeper {
   hasMobileAccess?: boolean; // Can use the mobile app
 }
 
+// --- Lot-based inventory model ---
+// Used by services/inventory/index.ts, inventory/services/movementService.ts,
+// inventory/services/productService.ts, and the mobile worksheet components.
+// These were referenced across the codebase but never declared, which broke
+// every import of them (services/inventory/index.ts, InventoryCountWorksheet.tsx,
+// stockCountService.ts).
+
+export interface StockLot {
+  id: string;
+  categoryId: string; // matches CategoryTemplate.name as currently created (e.g. "Apple")
+  variety: string;
+  size: string;
+  originCountry?: string;
+  grade?: string;
+  subVariety?: string;
+  status: 'Pending' | 'Received' | 'Verified' | 'Closed' | 'Expired' | 'Damaged';
+  createdAt: string; // ISO date-time
+  updatedAt: string; // ISO date-time
+  lastPalletSize?: number; // units-per-pallet last used when counting this lot, remembered as a default for next time
+}
+
+// One row in a pallet-based count: N pallets of X units each.
+// A single lot can be counted across several pallet sizes in one session
+// (e.g. 5 pallets of 120 + 10 pallets of 100 for the same item).
+export interface PalletBatch {
+  pallets: number;
+  unitsPerPallet: number;
+}
+
+export interface Transfer {
+  id: string;
+  sourceRoomId: string;
+  destinationRoomId: string;
+  status: 'Pending' | 'In Transit' | 'Completed' | 'Cancelled';
+  items?: { stockLotId: string; quantity: number }[];
+  requestedBy?: string;
+  createdAt?: string;
+  completedDate?: string;
+}
+
+export interface InventoryMovement {
+  id: string;
+  roomId: string;
+  stockLotId: string;
+  quantity: number; // positive = stock added to the room, negative = stock removed
+  type: 'RECEIPT' | 'TRANSFER_OUT' | 'TRANSFER_IN' | 'DISPATCH' | 'ADJUSTMENT';
+  referenceId?: string; // id of the shipment / transfer / order that caused this movement
+  notes?: string;
+  createdBy: string; // user id
+  timestamp: string; // ISO date-time
+}
+
+export interface Shipment {
+  id: string;
+  status: 'Pending' | 'Received' | 'Verified' | 'Closed';
+  destinationRoomId: string;
+  supplierName?: string;
+  receivedDate?: string; // ISO date-time, set when status becomes 'Received'
+  createdAt?: string;
+}
+
+export interface StockCountSessionItem {
+  stockLotId: string;
+  categoryId: string;
+  variety: string;
+  size: string;
+  expectedQty: number;
+  numberQty: number; // units entered directly by number
+  palletBreakdown: PalletBatch[]; // pallet rows entered; each row's pallets*unitsPerPallet adds to the counted subtotal
+  destructionQty: number; // units removed today via destruction — subtracted from the counted subtotal
+  auctionQty: number; // units removed today via auction — subtracted from the counted subtotal
+  actualQty: number; // final total = numberQty + sum(palletBreakdown) - destructionQty - auctionQty
+  difference: number; // actualQty - expectedQty
+  reason?: string; // required in the UI when difference !== 0
+  isManualEntry?: boolean; // true when this lot was added on the fly via "Add item not listed" rather than pre-existing in the room
+}
+
+export interface StockCountSession {
+  id?: string;
+  date: string; // YYYY-MM-DD
+  storeRoomId: string;
+  storekeeperId: string;
+  storekeeperName: string;
+  status: 'Pending Verification' | 'Approved' | 'Rejected';
+  timestamp: string; // ISO date-time
+  items: StockCountSessionItem[];
+}
+
 

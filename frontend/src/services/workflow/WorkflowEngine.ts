@@ -93,13 +93,10 @@ export const workflowEngine = new WorkflowEngine();
 
 
 // Register offline sync handler
-offlineSyncEngine.registerHandler(async (action: string, payload: any) => {
-  switch (action) {
-    case 'recordPayment':
-      await workflowEngine.recordPayment(payload.order, payload.amount, payload.method, payload.userId, payload.customers, true);
-      break;
-    case 'transitionOrder':
-      await workflowEngine.transitionOrder(payload.orderId, payload.status, payload.userId, true);
-      break;
-  }
+offlineSyncEngine.registerHandler('recordPayment', async (payload: any) => {
+  await workflowEngine.recordPayment(payload.order, payload.amount, payload.method, payload.userId, payload.customers, true);
+});
+
+offlineSyncEngine.registerHandler('transitionOrder', async (payload: any) => {
+  await workflowEngine.transitionOrder(payload.orderId, payload.status, payload.userId, true);
 });

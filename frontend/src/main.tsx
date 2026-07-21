@@ -46,12 +46,16 @@ if (hostname === 'automation-suit-scanner.web.app' || hostname === 'orderscanner
   RootComponent = SalesmanMobileApp;
 }
 
+import { AuthProvider } from './contexts/AuthContext';
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <ErrorBoundary>
-      <Suspense fallback={<div className="h-screen w-screen flex items-center justify-center bg-slate-900"><div className="w-8 h-8 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin"></div></div>}>
-        <RootComponent />
-      </Suspense>
+      <AuthProvider>
+        <Suspense fallback={<div className="h-screen w-screen flex items-center justify-center bg-slate-900"><div className="w-8 h-8 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin"></div></div>}>
+          <RootComponent />
+        </Suspense>
+      </AuthProvider>
     </ErrorBoundary>
   </StrictMode>,
 )

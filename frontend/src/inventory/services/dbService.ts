@@ -971,6 +971,34 @@ export function subscribeToSyncStatus(listener: (status: SyncStatusType) => void
   };
 }
 
+
+export function getPendingSyncCount(): number {
+  if (typeof window === "undefined") return 0;
+  let count = 0;
+  try {
+    const localLogs = localStorage.getItem("activity_logs");
+    if (localLogs) {
+      const logs = JSON.parse(localLogs);
+      if (Array.isArray(logs)) count += logs.length;
+    }
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith("local_records_")) {
+        const val = localStorage.getItem(key);
+        if (val) {
+          const records = JSON.parse(val);
+          if (Array.isArray(records)) {
+            count += records.filter((r: any) => r.id && r.id.startsWith("lcl_")).length;
+          }
+        }
+      }
+    }
+  } catch (e) {
+    console.error("Error calculating pending sync count", e);
+  }
+  return count;
+}
+
 export function updateSyncStatus(status: SyncStatusType) {
   currentSyncStatus = status;
   syncStatusListeners.forEach(listener => listener(status));
@@ -1081,12 +1109,7 @@ export async function syncOfflineData(): Promise<void> {
   }
 }
 
-// Auto sync when online status changes
-if (typeof window !== "undefined") {
-  window.addEventListener("online", () => {
-    syncOfflineData();
-  });
-}
+
 
 
 

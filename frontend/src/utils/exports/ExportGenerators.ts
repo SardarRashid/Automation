@@ -1,7 +1,7 @@
 import * as ExcelJS from 'exceljs';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
-import type { Customer, Order, Product, User } from '../../pages/SalesmanAdmin_V1';
+import type { Customer, Order, Product, User } from '../../pages/SalesmanAdmin';
 
 const formatCurrency = (val: number) => Number(val || 0).toFixed(2) + ' SAR';
 const formatDate = (dateString: string) => new Date(dateString).toLocaleDateString('en-GB');

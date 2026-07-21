@@ -1,4 +1,4 @@
-﻿import { inventoryService } from '../../services/inventory';
+import { inventoryService } from '../../services/inventory';
 import { database } from '../../lib/firebase';
 import { ref, update, child, push, set } from 'firebase/database';
 export const { getStockLots } = inventoryService;
@@ -21,4 +21,22 @@ export async function createStockLot(lotData: any): Promise<any> {
   };
   await set(newRef, lot);
   return lot;
+}
+
+export async function updateStockLotPalletSize(lotId: string, palletSize: number): Promise<void> {
+  const lotRef = child(ref(database, 'stock_lots'), lotId);
+  await update(lotRef, {
+    lastPalletSize: palletSize,
+    updatedAt: new Date().toISOString()
+  });
+}
+
+
+export async function updateStockLotQty(lotId: string, openingQty: number, todayQty: number): Promise<void> {
+  const lotRef = child(ref(database, 'stock_lots'), lotId);
+  await update(lotRef, {
+    openingQty,
+    todayQty,
+    updatedAt: new Date().toISOString()
+  });
 }

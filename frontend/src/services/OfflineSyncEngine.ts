@@ -1,3 +1,5 @@
+import { database } from '../lib/firebase';
+import { ref, get, set } from 'firebase/database';
 import { openDB } from 'idb';
 import type { DBSchema, IDBPDatabase } from 'idb';
 
@@ -105,12 +107,10 @@ class OfflineSyncEngine {
     }
   }
 
-  // This will dynamically resolve actions without importing WorkflowEngine directly 
-  // to avoid circular dependencies. WorkflowEngine will register its executor.
-  private actionHandler: ((action: string, payload: any) => Promise<void>) | null = null;
+  private handlers: Map<string, (payload: any) => Promise<void>> = new Map();
 
-  registerHandler(handler: (action: string, payload: any) => Promise<void>) {
-    this.actionHandler = handler;
+  registerHandler(action: string, handler: (payload: any) => Promise<void>) {
+    this.handlers.set(action, handler);
     // On register, try to sync if online
     if (navigator.onLine) {
       this.sync();
@@ -118,11 +118,25 @@ class OfflineSyncEngine {
   }
 
   private async executeAction(item: SyncItem) {
-    if (!this.actionHandler) {
-      console.warn('[OfflineSync] No handler registered for execution.');
+    const handler = this.handlers.get(item.action);
+    if (!handler) {
+      console.warn(`[OfflineSync] No handler registered for action ${item.action}`);
       return;
     }
-    await this.actionHandler(item.action, item.payload);
+
+    const processedRef = ref(database, `processed_transactions/${item.id}`);
+    const snapshot = await get(processedRef);
+    if (snapshot.exists()) {
+      return; // Already processed
+    }
+
+    await handler(item.payload);
+
+    // Mark processed
+    await set(processedRef, {
+      timestamp: Date.now(),
+      action: item.action
+    });
   }
 }
 

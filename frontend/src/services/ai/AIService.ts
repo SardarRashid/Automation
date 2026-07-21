@@ -1,5 +1,80 @@
-﻿import { database } from '../../lib/firebase';
+import { database } from '../../lib/firebase';
 import { ref, get } from 'firebase/database';
+import { GoogleGenAI } from '@google/genai';
+
+// Initialize the Google Gen AI client
+const apiKey = import.meta.env.VITE_GEMINI_API_KEY || '';
+const ai = new GoogleGenAI({ apiKey: apiKey || 'MISSING_API_KEY' });
+
+export interface AIOptions {
+  temperature?: number;
+  maxOutputTokens?: number;
+}
+
+/**
+ * Core AI generation function that handles retries and error reporting
+ */
+async function generateWithRetry(prompt: string, systemInstruction?: string, options?: AIOptions, retries = 3): Promise<string> {
+  if (!apiKey) {
+    console.error("VITE_GEMINI_API_KEY is not set in the environment variables.");
+    throw new Error("AI functionality is currently unavailable due to missing configuration.");
+  }
+
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      const response = await ai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: prompt,
+        config: {
+          systemInstruction: systemInstruction,
+          temperature: options?.temperature ?? 0.7,
+          maxOutputTokens: options?.maxOutputTokens ?? 4000,
+        }
+      });
+      
+      if (!response.text) {
+        throw new Error("Empty response from AI");
+      }
+      
+      return response.text;
+    } catch (error: any) {
+      console.warn(`AI generation attempt ${attempt} failed:`, error);
+      if (error?.status === 429) {
+          // Rate limit handling: double the wait time
+          await new Promise(resolve => setTimeout(resolve, 2000 * Math.pow(2, attempt)));
+          continue;
+      }
+      if (attempt === retries) {
+        throw new Error("AI service is currently unavailable. Please try again later.");
+      }
+      // Simple exponential backoff
+      await new Promise(resolve => setTimeout(resolve, 1000 * Math.pow(2, attempt)));
+    }
+  }
+  
+  throw new Error("AI request failed");
+}
+
+/**
+ * Extracts JSON from a markdown string containing code blocks
+ */
+function extractJson(text: string): any {
+  try {
+    return JSON.parse(text);
+  } catch (e) {
+    const match = text.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+    if (match && match[1]) {
+      try {
+        return JSON.parse(match[1]);
+      } catch (err) {
+        console.error("Failed to parse extracted JSON:", match[1]);
+        throw new Error("AI returned malformed data format.");
+      }
+    }
+    console.error("Failed to parse AI response as JSON:", text);
+    throw new Error("AI did not return valid JSON data.");
+  }
+}
 
 export class AIService {
   // =====================================
@@ -26,66 +101,70 @@ export class AIService {
       productsSnap.forEach(p => allProducts.push(p.val()));
     }
 
-    const suggestions = Object.entries(productCounts)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 3)
-      .map(([productId]) => allProducts.find(p => p.id === productId))
-      .filter(Boolean);
+    const prompt = `
+      Customer History: ${JSON.stringify(productCounts)}
+      Available Products: ${JSON.stringify(allProducts)}
+      Task: Analyze the customer's purchase history and recommend exactly 3 products they are most likely to buy next.
+      Return a JSON array of product objects (matching the structure from Available Products).
+    `;
 
-    return suggestions;
+    const response = await generateWithRetry(prompt, "You are a sales prediction AI. Return valid JSON only.");
+    return extractJson(response);
   }
 
   async predictOutstandingPayments(customerId: string): Promise<string> {
     const ordersSnap = await get(ref(database, 'sales_orders'));
     if (!ordersSnap.exists()) return "No data";
 
-    let totalDelayDays = 0;
-    let paidOrderCount = 0;
-    let latestUnpaidOrder: any = null;
-
+    const customerOrders: any[] = [];
     ordersSnap.forEach((child) => {
       const order = child.val();
       if (order.customerId === customerId) {
-        if (order.paymentStatus === 'Paid' && order.date) {
-          // Simplistic heuristic: assuming it was paid on update or delivery
-          // For real accuracy, we'd compare order.date vs payment.date from sales_payments
-          // Using a placeholder average of 14 days if we can't compute exact
-          totalDelayDays += 14; 
-          paidOrderCount++;
-        } else if (order.paymentStatus !== 'Paid') {
-          latestUnpaidOrder = order;
-        }
+          customerOrders.push(order);
       }
     });
 
-    if (!latestUnpaidOrder) return "No outstanding payments.";
-    const avgDelay = paidOrderCount > 0 ? (totalDelayDays / paidOrderCount) : 30; // default 30 days
-    const orderDate = new Date(latestUnpaidOrder.date || Date.now());
-    orderDate.setDate(orderDate.getDate() + avgDelay);
-    
-    return `Predicted Payment Date: ${orderDate.toLocaleDateString()}`;
+    const prompt = `
+      Customer Orders: ${JSON.stringify(customerOrders)}
+      Task: Analyze this customer's payment behavior. Predict the most likely payment date for their latest unpaid order.
+      Return a short predictive sentence (e.g. "Predicted Payment Date: YYYY-MM-DD").
+      Return JSON: { "prediction": "sentence" }
+    `;
+
+    try {
+        const response = await generateWithRetry(prompt, "You are a financial analyst AI. Return valid JSON only.");
+        return extractJson(response).prediction;
+    } catch {
+        return "Prediction unavailable.";
+    }
   }
 
   async generateDailySummary(): Promise<string> {
     const ordersSnap = await get(ref(database, 'sales_orders'));
-    let todayRevenue = 0;
-    let todayOrders = 0;
-    
     const today = new Date().toISOString().split('T')[0];
+    const todayOrders: any[] = [];
 
     if (ordersSnap.exists()) {
       ordersSnap.forEach((child) => {
         const order = child.val();
         if (order.date && order.date.startsWith(today)) {
-          todayOrders++;
-          if (order.status !== 'Cancelled') {
-            todayRevenue += Number(order.totalAmount || 0);
-          }
+          todayOrders.push(order);
         }
       });
     }
 
-    return `Today's Summary: ${todayOrders} orders totaling $${todayRevenue.toFixed(2)}.`;
+    const prompt = `
+      Today's Orders: ${JSON.stringify(todayOrders)}
+      Task: Write a concise, executive 1-sentence daily summary of sales performance.
+      Return JSON: { "summary": "sentence" }
+    `;
+
+    try {
+      const response = await generateWithRetry(prompt, "You are a business intelligence AI. Return valid JSON only.");
+      return extractJson(response).summary;
+    } catch {
+      return "Daily summary generation failed.";
+    }
   }
 
   // =====================================
@@ -94,61 +173,33 @@ export class AIService {
 
   async predictLowStock(): Promise<any[]> {
     const movSnap = await get(ref(database, 'inventory_movements'));
-    const velocityMap: Record<string, number> = {};
-    const stockMap: Record<string, number> = {};
+    const movements: any[] = [];
     
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-
     if (movSnap.exists()) {
-      movSnap.forEach(child => {
-        const m = child.val();
-        const key = `${m.roomId}_${m.stockLotId}`;
-        stockMap[key] = (stockMap[key] || 0) + Number(m.quantity);
-        
-        if (m.type === 'DISPATCH' && new Date(m.timestamp) > thirtyDaysAgo) {
-          velocityMap[key] = (velocityMap[key] || 0) + Math.abs(Number(m.quantity));
-        }
-      });
+      movSnap.forEach(child => movements.push(child.val()));
     }
 
-    const predictions: any[] = [];
-    for (const key of Object.keys(stockMap)) {
-      const currentStock = stockMap[key];
-      const monthlyVelocity = velocityMap[key] || 0;
-      const dailyVelocity = monthlyVelocity / 30;
-      
-      if (dailyVelocity > 0) {
-        const daysRemaining = currentStock / dailyVelocity;
-        if (daysRemaining < 7 && currentStock > 0) { // Will run out in less than a week
-          predictions.push({
-            key,
-            currentStock,
-            daysRemaining: Math.round(daysRemaining),
-            velocity: dailyVelocity.toFixed(2)
-          });
-        }
-      } else if (currentStock <= 5 && currentStock > 0) {
-          predictions.push({
-            key,
-            currentStock,
-            daysRemaining: 'Low',
-            velocity: 0
-          });
-      }
-    }
+    const prompt = `
+      Recent Inventory Movements: ${JSON.stringify(movements.slice(-100))}
+      Task: Identify stock lots that will run out within 7 days based on dispatch velocity.
+      Return JSON array of objects: [{ "key": "roomId_stockLotId", "currentStock": 10, "daysRemaining": 5, "velocity": "2/day" }]
+    `;
 
-    return predictions;
+    try {
+      const response = await generateWithRetry(prompt, "You are a supply chain forecasting AI. Return valid JSON only.");
+      return extractJson(response);
+    } catch {
+      return [];
+    }
   }
 
   async suggestTransfers(): Promise<string[]> {
-    // A simplified heuristic: if one room has high stock of a lot and another room has negative or 0 but high dispatch
-    return ["Suggestion: Transfer Lot #XYZ from Room A to Room B (High dispatch velocity in Room B)."];
+      // Mock logic can remain for structure, but ideally passes data to Gemini
+      return ["AI Transfer suggestions require current room capacities. (API update pending)"];
   }
 
   async detectAbnormalStock(): Promise<string[]> {
-    // E.g., stock that hasn't moved in 180 days (dead stock)
-    return ["Anomaly: Stock Lot #ABC has not moved in 6 months. Consider liquidating."];
+      return ["AI Anomaly detection requires full ledger access. (API update pending)"];
   }
 
   // =====================================
@@ -156,33 +207,29 @@ export class AIService {
   // =====================================
 
   async generateBusinessSummary(): Promise<any> {
-    const sum = await this.generateDailySummary();
-    return sum;
+    return await this.generateDailySummary();
   }
 
   async detectAnomalies(): Promise<string[]> {
-    const anomalies: string[] = [];
     const ordersSnap = await get(ref(database, 'sales_orders'));
+    const orders: any[] = [];
     
     if (ordersSnap.exists()) {
-      let maxTotal = 0;
-      let totalAmount = 0;
-      let count = 0;
-
-      ordersSnap.forEach((child) => {
-        const order = child.val();
-        const amt = Number(order.totalAmount || 0);
-        totalAmount += amt;
-        count++;
-        if (amt > maxTotal) maxTotal = amt;
-      });
-
-      const avg = count > 0 ? (totalAmount / count) : 0;
-      if (maxTotal > avg * 5) {
-         anomalies.push(`Found an unusually large order (${maxTotal}) which is 5x the average (${avg.toFixed(0)}).`);
-      }
+      ordersSnap.forEach((child) => orders.push(child.val()));
     }
-    return anomalies;
+
+    const prompt = `
+      Sales Data: ${JSON.stringify(orders.slice(-50))}
+      Task: Detect any anomalies in these recent orders (e.g. unusually large amounts).
+      Return JSON array of strings, each describing one anomaly found. If none, return empty array.
+    `;
+
+    try {
+      const response = await generateWithRetry(prompt, "You are a fraud detection and anomaly AI. Return valid JSON only.");
+      return extractJson(response);
+    } catch {
+      return [];
+    }
   }
 }
 

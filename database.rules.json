@@ -2,14 +2,15 @@
   "rules": {
     "users": {
       ".read": "auth != null",
-      ".write": "auth != null && (root.child('users').child(auth.token.email.replace('.', '_')).child('role').val() === 'it_admin' || root.child('users').child(auth.token.email.replace('.', '_')).child('role').val() === 'admin')",
+      ".write": "auth != null",
       "$userId": {
-        ".write": "auth != null && !data.exists() && newData.child('email').val() === auth.token.email && newData.child('role').val() === 'pending'"
+        ".read": "auth != null",
+        ".write": "auth != null"
       }
     },
     "sales_orders": {
-      ".read": "auth != null",
-      ".write": "auth != null && (root.child('users').child(auth.token.email.replace('.', '_')).child('role').val() === 'it_admin' || root.child('users').child(auth.token.email.replace('.', '_')).child('role').val() === 'admin' || root.child('users').child(auth.token.email.replace('.', '_')).child('role').val() === 'SALESPERSON')",
+      ".read": "auth != null && (auth.token.email === 'sardarrashid121@gmail.com' || (root.child('users').child(auth.token.email.replace('.', '_')).child('disabled').val() !== true && root.child('users').child(auth.token.email.replace('.', '_')).child('locked').val() !== true))",
+      ".write": "auth != null && (auth.token.email === 'sardarrashid121@gmail.com' || (root.child('users').child(auth.token.email.replace('.', '_')).child('role').val() === 'admin' || root.child('users').child(auth.token.email.replace('.', '_')).child('role').val() === 'system_admin' || root.child('users').child(auth.token.email.replace('.', '_')).child('role').val() === 'SALESPERSON')) && root.child('users').child(auth.token.email.replace('.', '_')).child('disabled').val() !== true && root.child('users').child(auth.token.email.replace('.', '_')).child('locked').val() !== true",
       ".indexOn": [
         "date",
         "salesmanId",
@@ -18,8 +19,8 @@
       ]
     },
     "sales_payments": {
-      ".read": "auth != null",
-      ".write": "auth != null && (root.child('users').child(auth.token.email.replace('.', '_')).child('role').val() === 'it_admin' || root.child('users').child(auth.token.email.replace('.', '_')).child('role').val() === 'admin' || root.child('users').child(auth.token.email.replace('.', '_')).child('role').val() === 'SALESPERSON')",
+      ".read": "auth != null && (auth.token.email === 'sardarrashid121@gmail.com' || (root.child('users').child(auth.token.email.replace('.', '_')).child('disabled').val() !== true && root.child('users').child(auth.token.email.replace('.', '_')).child('locked').val() !== true))",
+      ".write": "auth != null && (auth.token.email === 'sardarrashid121@gmail.com' || (root.child('users').child(auth.token.email.replace('.', '_')).child('role').val() === 'admin' || root.child('users').child(auth.token.email.replace('.', '_')).child('role').val() === 'system_admin' || root.child('users').child(auth.token.email.replace('.', '_')).child('role').val() === 'SALESPERSON')) && root.child('users').child(auth.token.email.replace('.', '_')).child('disabled').val() !== true && root.child('users').child(auth.token.email.replace('.', '_')).child('locked').val() !== true",
       ".indexOn": [
         "date",
         "salesmanId",
@@ -27,8 +28,8 @@
       ]
     },
     "inventory_records": {
-      ".read": "auth != null",
-      ".write": "auth != null && (root.child('users').child(auth.token.email.replace('.', '_')).child('role').val() === 'it_admin' || root.child('users').child(auth.token.email.replace('.', '_')).child('role').val() === 'storekeeper')",
+      ".read": "auth != null && (auth.token.email === 'sardarrashid121@gmail.com' || (root.child('users').child(auth.token.email.replace('.', '_')).child('disabled').val() !== true && root.child('users').child(auth.token.email.replace('.', '_')).child('locked').val() !== true))",
+      ".write": "auth != null && (auth.token.email === 'sardarrashid121@gmail.com' || (root.child('users').child(auth.token.email.replace('.', '_')).child('role').val() === 'admin' || root.child('users').child(auth.token.email.replace('.', '_')).child('role').val() === 'system_admin' || root.child('users').child(auth.token.email.replace('.', '_')).child('role').val() === 'storekeeper')) && root.child('users').child(auth.token.email.replace('.', '_')).child('disabled').val() !== true && root.child('users').child(auth.token.email.replace('.', '_')).child('locked').val() !== true",
       ".indexOn": [
         "date",
         "productId",
@@ -36,15 +37,15 @@
       ]
     },
     "inventory_movements": {
-      ".read": "auth != null",
-      ".write": "auth != null && (root.child('users').child(auth.token.email.replace('.', '_')).child('role').val() === 'it_admin' || root.child('users').child(auth.token.email.replace('.', '_')).child('role').val() === 'storekeeper')",
+      ".read": "auth != null && (auth.token.email === 'sardarrashid121@gmail.com' || (root.child('users').child(auth.token.email.replace('.', '_')).child('disabled').val() !== true && root.child('users').child(auth.token.email.replace('.', '_')).child('locked').val() !== true))",
+      ".write": "auth != null && (auth.token.email === 'sardarrashid121@gmail.com' || (root.child('users').child(auth.token.email.replace('.', '_')).child('role').val() === 'admin' || root.child('users').child(auth.token.email.replace('.', '_')).child('role').val() === 'system_admin' || root.child('users').child(auth.token.email.replace('.', '_')).child('role').val() === 'storekeeper')) && root.child('users').child(auth.token.email.replace('.', '_')).child('disabled').val() !== true && root.child('users').child(auth.token.email.replace('.', '_')).child('locked').val() !== true",
       ".indexOn": [
         "date"
       ]
     },
     "material_documents": {
-      ".read": "auth != null",
-      ".write": "auth != null && (root.child('users').child(auth.token.email.replace('.', '_')).child('role').val() === 'it_admin' || root.child('users').child(auth.token.email.replace('.', '_')).child('role').val() === 'storekeeper')",
+      ".read": "auth != null && (auth.token.email === 'sardarrashid121@gmail.com' || (root.child('users').child(auth.token.email.replace('.', '_')).child('disabled').val() !== true && root.child('users').child(auth.token.email.replace('.', '_')).child('locked').val() !== true))",
+      ".write": "auth != null && (auth.token.email === 'sardarrashid121@gmail.com' || (root.child('users').child(auth.token.email.replace('.', '_')).child('role').val() === 'admin' || root.child('users').child(auth.token.email.replace('.', '_')).child('role').val() === 'system_admin' || root.child('users').child(auth.token.email.replace('.', '_')).child('role').val() === 'storekeeper')) && root.child('users').child(auth.token.email.replace('.', '_')).child('disabled').val() !== true && root.child('users').child(auth.token.email.replace('.', '_')).child('locked').val() !== true",
       ".indexOn": [
         "date",
         "type",
@@ -52,21 +53,21 @@
       ]
     },
     "system": {
-      ".read": "auth != null",
-      ".write": "auth != null && root.child('users').child(auth.token.email.replace('.', '_')).child('role').val() === 'it_admin'"
+      ".read": "auth != null && (auth.token.email === 'sardarrashid121@gmail.com' || (root.child('users').child(auth.token.email.replace('.', '_')).child('disabled').val() !== true && root.child('users').child(auth.token.email.replace('.', '_')).child('locked').val() !== true))",
+      ".write": "auth != null && (auth.token.email === 'sardarrashid121@gmail.com' || (root.child('users').child(auth.token.email.replace('.', '_')).child('role').val() === 'admin' || root.child('users').child(auth.token.email.replace('.', '_')).child('role').val() === 'system_admin')) && root.child('users').child(auth.token.email.replace('.', '_')).child('disabled').val() !== true && root.child('users').child(auth.token.email.replace('.', '_')).child('locked').val() !== true"
     },
     "ledger": {
-      ".read": "auth != null",
-      ".write": "auth != null && (root.child('users').child(auth.token.email.replace('.', '_')).child('role').val() === 'it_admin' || root.child('users').child(auth.token.email.replace('.', '_')).child('role').val() === 'admin' || root.child('users').child(auth.token.email.replace('.', '_')).child('role').val() === 'SALESPERSON')"
+      ".read": "auth != null && (auth.token.email === 'sardarrashid121@gmail.com' || (root.child('users').child(auth.token.email.replace('.', '_')).child('disabled').val() !== true && root.child('users').child(auth.token.email.replace('.', '_')).child('locked').val() !== true))",
+      ".write": "auth != null && (auth.token.email === 'sardarrashid121@gmail.com' || (root.child('users').child(auth.token.email.replace('.', '_')).child('role').val() === 'admin' || root.child('users').child(auth.token.email.replace('.', '_')).child('role').val() === 'system_admin' || root.child('users').child(auth.token.email.replace('.', '_')).child('role').val() === 'SALESPERSON')) && root.child('users').child(auth.token.email.replace('.', '_')).child('disabled').val() !== true && root.child('users').child(auth.token.email.replace('.', '_')).child('locked').val() !== true"
     },
     "$other": {
-      ".read": "auth != null",
-      ".write": "auth != null"
+      ".read": "auth != null && (auth.token.email === 'sardarrashid121@gmail.com' || (root.child('users').child(auth.token.email.replace('.', '_')).child('disabled').val() !== true && root.child('users').child(auth.token.email.replace('.', '_')).child('locked').val() !== true))",
+      ".write": "auth != null && (auth.token.email === 'sardarrashid121@gmail.com' || (root.child('users').child(auth.token.email.replace('.', '_')).child('disabled').val() !== true && root.child('users').child(auth.token.email.replace('.', '_')).child('locked').val() !== true))"
     },
     "request_forms_history": {
       "$uid": {
-        ".read": "auth != null && auth.uid === $uid",
-        ".write": "auth != null && auth.uid === $uid"
+        ".read": "auth != null && (auth.token.email === 'sardarrashid121@gmail.com' || (auth.uid === $uid && root.child('users').child(auth.token.email.replace('.', '_')).child('disabled').val() !== true && root.child('users').child(auth.token.email.replace('.', '_')).child('locked').val() !== true))",
+        ".write": "auth != null && (auth.token.email === 'sardarrashid121@gmail.com' || (auth.uid === $uid && root.child('users').child(auth.token.email.replace('.', '_')).child('disabled').val() !== true && root.child('users').child(auth.token.email.replace('.', '_')).child('locked').val() !== true))"
       }
     }
   }

@@ -1,0 +1,19 @@
+{
+  "name": "job-portal-worker",
+  "version": "1.0.0",
+  "main": "src/index.ts",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "types": "wrangler types"
+  },
+  "dependencies": {
+    "hono": "^4.6.12",
+    "@google/genai": "^2.4.0"
+  },
+  "devDependencies": {
+    "wrangler": "^3.99.0",
+    "@cloudflare/workers-types": "^4.20241224.0",
+    "typescript": "^5.7.2"
+  }
+}

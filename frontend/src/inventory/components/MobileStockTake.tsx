@@ -39,7 +39,7 @@ export function MobileStockTake({
   onToggleTheme
 }: MobileStockTakeProps) {
   
-  const [activeScreen, setActiveScreen] = useState<ActiveScreen>('HUB');
+  const [activeScreen, setActiveScreen] = useState<ActiveScreen>('COUNT');
   const [storeRooms, setStoreRooms] = useState<StoreRoom[]>([]);
   const [successMsg, setSuccessMsg] = useState("");
 
