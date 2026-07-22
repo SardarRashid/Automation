@@ -7,7 +7,6 @@ import { ArrowLeft, Shield, Lock, Key, User, AlertTriangle, CheckCircle2, XCircl
 import { APPLICATIONS } from '../../config/ApplicationRegistry';
 
 interface CustomUser {
-  password?: string;
   role?: string;
   email?: string;
   disabled?: boolean;
@@ -83,6 +82,9 @@ export default function UserManagement({ userKey, onBack, currentUserEmail, isSy
   const [newPermissionKey, setNewPermissionKey] = useState('');
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showDisableModal, setShowDisableModal] = useState(false);
+  const [showSetPasswordModal, setShowSetPasswordModal] = useState(false);
+  const [newDirectPassword, setNewDirectPassword] = useState('');
+  const [settingPassword, setSettingPassword] = useState(false);
   const { addToast } = useToast();
 
   useEffect(() => {
@@ -107,6 +109,43 @@ export default function UserManagement({ userKey, onBack, currentUserEmail, isSy
     } catch (err: any) {
       console.error('Error sending password reset:', err);
       addToast('error', 'Unable to send password reset email. Please try again.');
+    }
+  };
+
+  const handleSetDirectPassword = async () => {
+    if (!user?.email || !newDirectPassword) return;
+    setSettingPassword(true);
+    try {
+      const currentUser = auth.currentUser;
+      if (!currentUser) throw new Error('Not logged in');
+      const idToken = await currentUser.getIdToken();
+      
+      const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000';
+      const response = await fetch(`${backendUrl}/api/admin/set-password`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${idToken}`
+        },
+        body: JSON.stringify({
+          target_email: user.email,
+          new_password: newDirectPassword
+        })
+      });
+
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.detail || 'Failed to update password');
+      }
+
+      addToast('success', 'Password updated successfully via admin API.');
+      setShowSetPasswordModal(false);
+      setNewDirectPassword('');
+    } catch (err: any) {
+      console.error('Error setting direct password:', err);
+      addToast('error', err.message || 'Unable to update password.');
+    } finally {
+      setSettingPassword(false);
     }
   };
 
@@ -555,18 +594,6 @@ export default function UserManagement({ userKey, onBack, currentUserEmail, isSy
 
                 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="col-span-1 md:col-span-2 mb-4 bg-white p-4 rounded-lg border border-slate-200">
-                      <label className="block text-sm font-bold text-slate-700 mb-1.5">User Database Password</label>
-                      <input
-                        type="text"
-                        value={user?.password || ''}
-                        onChange={(e) => setUser(prev => prev ? { ...prev, password: e.target.value } : prev)}
-                        className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-600 outline-none text-slate-800"
-                        placeholder="Current DB password"
-                      />
-                      <p className="text-xs text-slate-500 mt-2">Note: Changing this only updates the database record. It doesn't bypass Firebase Auth unless a custom auth flow uses it.</p>
-                    </div>
-
                   <button
                     onClick={handleSendPasswordReset}
                     className="p-4 bg-slate-50 hover:bg-slate-100 rounded-lg text-left transition-colors"
@@ -574,6 +601,14 @@ export default function UserManagement({ userKey, onBack, currentUserEmail, isSy
                     <Key className="w-6 h-6 text-slate-600 mb-2" />
                     <p className="font-semibold text-slate-900">Send Password Reset Email</p>
                     <p className="text-sm text-slate-500">Send a password reset link to user's email</p>
+                  </button>
+                  <button
+                    onClick={() => setShowSetPasswordModal(true)}
+                    className="p-4 bg-slate-50 hover:bg-slate-100 rounded-lg text-left transition-colors"
+                  >
+                    <Lock className="w-6 h-6 text-slate-600 mb-2" />
+                    <p className="font-semibold text-slate-900">Set Password Directly</p>
+                    <p className="text-sm text-slate-500">Instantly change the user's password (requires API)</p>
                   </button>
                   <button
                     onClick={handleForcePasswordChange}
@@ -716,6 +751,41 @@ export default function UserManagement({ userKey, onBack, currentUserEmail, isSy
                 className={`px-4 py-2 text-white rounded-lg font-medium transition-colors ${user.disabled ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-red-600 hover:bg-red-700'}`}
               >
                 {user.disabled ? 'Yes, Enable' : 'Yes, Disable'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Set Password Modal */}
+      {showSetPasswordModal && (
+        <div className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-xl">
+            <h3 className="text-xl font-bold text-slate-900 mb-4">Set New Password</h3>
+            <div className="mb-6">
+              <label className="block text-sm font-semibold text-slate-700 mb-2">New Password</label>
+              <input
+                type="text"
+                value={newDirectPassword}
+                onChange={(e) => setNewDirectPassword(e.target.value)}
+                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-600 outline-none"
+                placeholder="Enter new password"
+              />
+            </div>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => setShowSetPasswordModal(false)}
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg font-medium transition-colors"
+                disabled={settingPassword}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSetDirectPassword}
+                disabled={settingPassword || !newDirectPassword}
+                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50"
+              >
+                {settingPassword ? 'Saving...' : 'Set Password'}
               </button>
             </div>
           </div>

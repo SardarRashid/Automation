@@ -1,9 +1,18 @@
+import { auth } from '../lib/firebase';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Camera, List, CheckCircle, LogOut, Package, ScanLine, Settings, AlertTriangle, WifiOff, RefreshCw, Search, ListOrdered } from 'lucide-react';
 import { Html5QrcodeScanner } from 'html5-qrcode';
 import { FirebaseAPI } from '../lib/scanner-firebase';
 
 const DB_URL = "https://automation-suit-cece7-default-rtdb.asia-southeast1.firebasedatabase.app";
+
+const fetchWithAuth = async (url: string, options?: RequestInit) => {
+  const token = auth.currentUser ? await auth.currentUser.getIdToken() : '';
+  const separator = url.includes('?') ? '&' : '?';
+  const finalUrl = token ? `${url}${separator}auth=${token}` : url;
+  return fetch(finalUrl, options);
+};
+
 
 interface Order {
   orderNumber: string;

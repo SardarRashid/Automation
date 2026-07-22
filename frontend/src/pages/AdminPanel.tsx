@@ -330,12 +330,11 @@ export default function AdminPanel() {
     
     try {
       // Use Firebase SDK for proper authentication
-      const { createUserWithEmailAndPassword } = await import('firebase/auth');
-      const { auth: firebaseAuth } = await import('../lib/firebase');
+      const { createUserWithoutSwitchingSession } = await import('../lib/createUserIsolated');
       
-      let userCredential;
+      let createdUser;
       try {
-        userCredential = await createUserWithEmailAndPassword(firebaseAuth, newUserEmail, newUserPass);
+        createdUser = await createUserWithoutSwitchingSession(newUserEmail, newUserPass);
       } catch (authError: any) {
         if (authError.code === 'auth/email-already-in-use') {
           // Email exists in Firebase Auth, proceed to update database profile
@@ -364,7 +363,6 @@ export default function AdminPanel() {
         newApplicationAccess.notes = true;
         newApplicationAccess.profile = true;
         newApplicationAccess.appHub = true;
-        newApplicationAccess.centralReports = true;
         newApplicationAccess.pythonDesktop = true;
       } else if (newUserRole === 'manager' || newUserRole === 'app') {
         newApplicationAccess.salesAdmin = true;
@@ -372,7 +370,6 @@ export default function AdminPanel() {
         newApplicationAccess.reports = true;
       } else if (newUserRole === 'scanner' || newUserRole === 'scanner_admin') {
         newApplicationAccess.scanner = true;
-        newApplicationAccess.scannerMobile = true;
       } else if (newUserRole === 'salesman') {
         newApplicationAccess.salesmanMobile = true;
       } else if (newUserRole === 'storekeeper') {
@@ -382,7 +379,6 @@ export default function AdminPanel() {
       
       const userData = {
         email: newUserEmail,
-        password: newUserPass,
         role: newUserRole === 'manager' ? 'app' : newUserRole,
         applicationAccess: newApplicationAccess,
         applicationRoles: {},

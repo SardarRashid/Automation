@@ -10,6 +10,7 @@ export interface Application {
   visible: boolean;
   description?: string;
   externalUrl?: string;
+  platforms?: ('web' | 'mobile')[];
 }
 
 export const APPLICATIONS: Application[] = [
@@ -46,16 +47,7 @@ export const APPLICATIONS: Application[] = [
     visible: false, // Mobile app specific
     description: 'Mobile sales application for salesmen'
   },
-  {
-    id: 'central_reports',
-    displayName: 'Central Reports',
-    icon: FileText,
-    route: 'central_reports',
-    applicationAccessKey: 'centralReports',
-    category: 'sales',
-    visible: true,
-    description: 'Centralized reporting hub'
-  },
+
 
   // --- Inventory ---
   {
@@ -88,18 +80,10 @@ export const APPLICATIONS: Application[] = [
     applicationAccessKey: 'scanner',
     category: 'scanner',
     visible: true,
-    description: 'Barcode scanner and tracking'
+    description: 'Barcode scanner and tracking',
+    platforms: ['web', 'mobile']
   },
-  {
-    id: 'scanner_mobile',
-    displayName: 'Scanner Mobile',
-    icon: Scan,
-    route: 'scanner_tracking',
-    applicationAccessKey: 'scannerMobile',
-    category: 'scanner',
-    visible: false,
-    description: 'Mobile scanner application'
-  },
+
 
   // --- Productivity ---
   {
@@ -110,7 +94,8 @@ export const APPLICATIONS: Application[] = [
     applicationAccessKey: 'reports',
     category: 'productivity',
     visible: true,
-    description: 'Generate and manage reports'
+    description: 'Generate and manage reports',
+    platforms: ['web', 'mobile']
   },
   {
     id: 'po_invoice',

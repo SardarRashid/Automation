@@ -1,4 +1,4 @@
-from fastapi import FastAPI, UploadFile, File, Form, HTTPException, BackgroundTasks
+from fastapi import FastAPI, UploadFile, File, Form, HTTPException, BackgroundTasks, Header, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from starlette.concurrency import run_in_threadpool
@@ -10,11 +10,54 @@ import json
 import requests
 import re
 from typing import Optional
+from pydantic import BaseModel
+
+import firebase_admin
+from firebase_admin import credentials, auth as firebase_auth, db as firebase_db
+
+if not firebase_admin._apps:
+    # Initialize with default credentials
+    firebase_admin.initialize_app(options={
+        'databaseURL': 'https://automation-suit-cece7-default-rtdb.firebaseio.com'
+    })
+
+class SetPasswordRequest(BaseModel):
+    target_email: str
+    new_password: str
+
+class DisableUserRequest(BaseModel):
+    target_email: str
+    disabled: bool
+
+def verify_admin(authorization: str = Header(None)):
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Invalid token")
+    token = authorization.split("Bearer ")[1]
+    try:
+        decoded = firebase_auth.verify_id_token(token)
+    except Exception as e:
+        raise HTTPException(status_code=401, detail=f"Token verification failed: {str(e)}")
+    
+    email = decoded.get("email", "")
+    if email == "sardarrashid121@gmail.com":
+        return decoded
+    
+    uid = decoded.get("uid")
+    # Read user role from DB
+    try:
+        user_ref = firebase_db.reference(f'users/{uid}')
+        user_data = user_ref.get()
+        if user_data and user_data.get('role') in ['admin', 'system_admin']:
+            return decoded
+    except Exception as e:
+        pass
+        
+    raise HTTPException(status_code=403, detail="Admin privileges required")
 
 def secure_filename(filename: str) -> str:
     if not filename:
         return "uploaded_file"
-    filename = os.path.basename(filename.replace("\", "/"))
+    filename = os.path.basename(filename.replace("\\", "/"))
     filename = re.sub(r"[^a-zA-Z0-9_.-]", "_", filename)
     return filename or "uploaded_file"
 
@@ -404,4 +447,22 @@ async def process_request_form(
         
     except Exception as e:
         cleanup_temp(temp_dir)
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.post("/api/admin/set-password")
+async def admin_set_password(req: SetPasswordRequest, admin_user: dict = Depends(verify_admin)):
+    try:
+        user_record = firebase_auth.get_user_by_email(req.target_email)
+        firebase_auth.update_user(user_record.uid, password=req.new_password)
+        return {"message": "Password updated successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.post("/api/admin/disable-user")
+async def admin_disable_user(req: DisableUserRequest, admin_user: dict = Depends(verify_admin)):
+    try:
+        user_record = firebase_auth.get_user_by_email(req.target_email)
+        firebase_auth.update_user(user_record.uid, disabled=req.disabled)
+        return {"message": f"User {'disabled' if req.disabled else 'enabled'} successfully"}
+    except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))

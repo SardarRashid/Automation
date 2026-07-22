@@ -140,7 +140,7 @@ export default function AppHub({ onNavigate }: AppHubProps) {
               )}
               {onNavigate && app.id === 'central-reports' && (
                 <button
-                  onClick={() => onNavigate('central_reports')}
+                  onClick={() => onNavigate('reports')}
                   className="mt-3 w-full bg-indigo-600 text-white py-2.5 px-4 rounded-lg font-bold flex items-center justify-center hover:bg-indigo-700 transition-colors"
                 >
                   <AppWindow className="w-4 h-4 mr-2" />

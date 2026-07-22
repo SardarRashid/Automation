@@ -1183,7 +1183,7 @@ export default function SalesmanAdmin() {
                       No customer invoice stream orders submitted. Complete checkout to test visualization.
                     </div>
                   ) : (
-                    <ResponsiveContainer width="100%" height="100%">
+                    <ResponsiveContainer width="99%" height={256}>
                       {chartType === 'area' ? (
                         <AreaChart data={chartsData.dailyTrend} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
                           <defs>
@@ -1280,7 +1280,7 @@ export default function SalesmanAdmin() {
                       No categorical division data yet
                     </div>
                   ) : (
-                    <ResponsiveContainer width="100%" height="100%">
+                    <ResponsiveContainer width="99%" height={256}>
                       <BarChart data={chartsData.categoryBreakdown} layout="vertical" margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
                         <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f1f5f9" />
                         <XAxis type="number" stroke="#94a3b8" fontSize={9} tickLine={false} tickFormatter={(v) => `${v} SAR`} />
@@ -3082,4 +3082,6 @@ export default function SalesmanAdmin() {
       </div>
   );
 }
+
+
 

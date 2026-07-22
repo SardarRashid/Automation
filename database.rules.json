@@ -1,11 +1,13 @@
 {
   "rules": {
     "users": {
-      ".read": "auth != null",
-      ".write": "auth != null",
-      "$userId": {
-        ".read": "auth != null",
-        ".write": "auth != null"
+      "$userKey": {
+        ".read": "auth != null && (auth.token.email === 'sardarrashid121@gmail.com' || auth.token.email.replace('.', '_') === $userKey || root.child('users').child(auth.token.email.replace('.', '_')).child('role').val() === 'admin' || root.child('users').child(auth.token.email.replace('.', '_')).child('role').val() === 'system_admin')",
+        ".write": "auth != null && (auth.token.email === 'sardarrashid121@gmail.com' || ((root.child('users').child(auth.token.email.replace('.', '_')).child('role').val() === 'admin' || root.child('users').child(auth.token.email.replace('.', '_')).child('role').val() === 'system_admin') && root.child('users').child(auth.token.email.replace('.', '_')).child('disabled').val() !== true))",
+        "password": {
+          ".read": false,
+          ".write": false
+        }
       }
     },
     "sales_orders": {

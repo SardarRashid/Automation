@@ -112,8 +112,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             }
 
             const isSysAdmin = data.role === 'system_admin' || 
-                               data.role === 'admin' || 
-                               currentUser.email?.toLowerCase().includes('admin@');
+                               data.role === 'admin';
             setIsSystemAdmin(isSysAdmin || isOwner);
             setIsRecoveryMode(isOwner);
 

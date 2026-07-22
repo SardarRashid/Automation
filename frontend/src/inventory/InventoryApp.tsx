@@ -30,7 +30,6 @@ export default function InventoryApp({ currentUser: globalUser, onLogout: global
 
   
   // Login Gateway State
-  const [users, setUsers] = useState<Storekeeper[]>([]);
   const [email, setEmail] = useState('');
   const [pin, setPin] = useState('');
   const [loginError, setLoginError] = useState('');
@@ -44,41 +43,7 @@ export default function InventoryApp({ currentUser: globalUser, onLogout: global
   const [forceMobileMode, setForceMobileMode] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Fetch users for login gateway
-  useEffect(() => {
-    async function fetchUsers() {
-      try {
-        const snapshot = await get(ref(database, 'users'));
-        if (snapshot.exists()) {
-          const data = snapshot.val();
-          const parsedUsers: Storekeeper[] = [];
-          Object.keys(data).forEach(key => {
-            const u = data[key];
-            // Only include users who have inventory access
-            if (u.role === 'inventory_taking' || u.allowedApps?.inventory_taking || u.role === 'app' || u.allowedApps?.app || u.permissions?.inventory_admin || u.permissions?.inventory_mobile) {
-              parsedUsers.push({
-                id: key,
-                name: u.email ? u.email.split('@')[0] : key,
-                email: u.email || '',
-                pin: u.password || '',
-                // If they are not explicitly 'storekeeper', make them 'supervisor'
-                role: (u.role === 'storekeeper' || u.role === 'inventory_taking') ? 'storekeeper' : 'supervisor',
-                assignedSection: u.assignedSection || 'All',
-                assignedStoreNum: u.assignedStoreNum || 'All',
-                hasMobileAccess: true
-              });
-            }
-          });
-          setUsers(parsedUsers);
-        }
-      } catch (err) {
-        console.error("Error fetching users:", err);
-      } finally {
-        setIsLoading(false);
-      }
-    }
-    fetchUsers();
-  }, []);
+
 
   useEffect(() => {
     if (!inventorySession) return;
@@ -114,31 +79,11 @@ export default function InventoryApp({ currentUser: globalUser, onLogout: global
     fetchDailyRecords();
   }, [selectedDate, activeTab, inventorySession]);
 
-  const handleLogin = (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoginError('');
-    const user = users.find(u => u.email?.toLowerCase() === email.toLowerCase());
-    if (!user) {
-      setLoginError("User not found or invalid email.");
-      return;
-    }
-    if (user.pin !== pin) {
-      setLoginError("Incorrect password.");
-      return;
-    }
-    
-    if (rememberMe) {
-      localStorage.setItem('inventoryLogin', JSON.stringify(user));
-    }
-    setPin('');
-  };
 
-  const handleLogout = () => {
-    
-    localStorage.removeItem('inventoryLogin');
-    setPin('');
-    setEmail('');
-  };
+
+
+
+  const handleLogout = () => { /* global auth handles this */ };
 
   const handleSaveCategory = async (updatedCategory: CategoryTemplate) => {
     try {
@@ -386,3 +331,5 @@ export default function InventoryApp({ currentUser: globalUser, onLogout: global
     </div>
   );
 }
+
+

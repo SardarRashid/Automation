@@ -2,9 +2,17 @@ import React, { useState, useEffect } from 'react';
 import { Upload, Trash2, Package, CheckCircle, Clock, UserPlus } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import JSZip from 'jszip';
-import { firebaseConfig } from '../lib/firebase';
+import { firebaseConfig, auth } from '../lib/firebase';
 
 const DB_URL = "https://automation-suit-cece7-default-rtdb.asia-southeast1.firebasedatabase.app";
+
+const fetchWithAuth = async (url: string, options?: RequestInit) => {
+  const token = auth.currentUser ? await auth.currentUser.getIdToken() : '';
+  const separator = url.includes('?') ? '&' : '?';
+  const finalUrl = token ? `${url}${separator}auth=${token}` : url;
+  return fetch(finalUrl, options);
+};
+
 
 interface Order {
   tripNumber: string;
