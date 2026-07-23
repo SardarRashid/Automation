@@ -5,6 +5,7 @@ import { sendPasswordResetEmail } from 'firebase/auth';
 import { useToast } from '../../components/ui/ToastNotification';
 import { ArrowLeft, Shield, Lock, Key, User, AlertTriangle, CheckCircle2, XCircle, Settings, Smartphone } from 'lucide-react';
 import { APPLICATIONS } from '../../config/ApplicationRegistry';
+import { getBackendUrl } from '../../lib/config';
 
 interface CustomUser {
   role?: string;
@@ -119,8 +120,7 @@ export default function UserManagement({ userKey, onBack, currentUserEmail, isSy
       const currentUser = auth.currentUser;
       if (!currentUser) throw new Error('Not logged in');
       const idToken = await currentUser.getIdToken();
-      
-      const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000';
+      const backendUrl = await getBackendUrl();
       const response = await fetch(`${backendUrl}/api/admin/set-password`, {
         method: 'POST',
         headers: {
@@ -250,6 +250,23 @@ export default function UserManagement({ userKey, onBack, currentUserEmail, isSy
     const isDisabling = !user.disabled;
     
     try {
+      const currentUser = auth.currentUser;
+      if (currentUser) {
+        const idToken = await currentUser.getIdToken();
+        const backendUrl = await getBackendUrl();
+        await fetch(`${backendUrl}/api/admin/disable-user`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${idToken}`
+          },
+          body: JSON.stringify({
+            target_email: user.email,
+            disabled: isDisabling
+          })
+        });
+      }
+
       await update(ref(database, `users/${userKey}`), { disabled: isDisabling });
       setUser({ ...user, disabled: isDisabling });
       addToast('success', isDisabling ? 'User disabled successfully.' : 'User enabled successfully.');

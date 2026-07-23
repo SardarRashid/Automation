@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { database } from '../lib/firebase';
+import { database, auth } from '../lib/firebase';
 import { ref, onValue, set, remove, update } from 'firebase/database';
 import { firebaseConfig } from '../lib/firebase';
+import { getBackendUrl } from '../lib/config';
 import UserManagement from './admin/UserManagement';
 import SystemSettings from './admin/SystemSettings';
 import AuditLog from './admin/AuditLog';
@@ -107,6 +108,9 @@ export default function AdminPanel() {
 
     const unsubUsers = onValue(usersRef, (snapshot) => {
       setUsers(snapshot.val() || {});
+      setLoading(false);
+    }, (error) => {
+      console.error("Error fetching users:", error);
       setLoading(false);
     });
 
@@ -326,23 +330,31 @@ export default function AdminPanel() {
       return;
     }
     
-    const userKey = newUserEmail.toLowerCase().replace(/[.#$\[\]]/g, '_');
+    const userKey = newUserEmail.toLowerCase().replace(/[.#$[\]]/g, '_');
     
     try {
-      // Use Firebase SDK for proper authentication
-      const { createUserWithoutSwitchingSession } = await import('../lib/createUserIsolated');
-      
-      let createdUser;
-      try {
-        createdUser = await createUserWithoutSwitchingSession(newUserEmail, newUserPass);
-      } catch (authError: any) {
-        if (authError.code === 'auth/email-already-in-use') {
-          // Email exists in Firebase Auth, proceed to update database profile
-          console.log('User already exists in Firebase Auth, updating profile');
-        } else {
-          throw new Error(authError.message || 'Failed to create Firebase Auth user');
-        }
+      // Use backend Admin SDK to create user (doesn't switch admin session)
+      const currentUser = auth.currentUser;
+      if (!currentUser) throw new Error('Not logged in');
+      const idToken = await currentUser.getIdToken();
+      const backendUrl = await getBackendUrl();
+
+      const res = await fetch(`${backendUrl}/api/admin/create-user`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${idToken}`
+        },
+        body: JSON.stringify({ email: newUserEmail, password: newUserPass })
+      });
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.detail || 'Failed to create user in Firebase Auth');
       }
+
+      const createdData = await res.json();
+      const createdUid = createdData.uid;
 
       // Use modern applicationAccess structure from ApplicationRegistry
       const { getDefaultApplicationAccess } = await import('../config/ApplicationRegistry');
@@ -390,14 +402,19 @@ export default function AdminPanel() {
 
       await set(ref(database, `users/${userKey}`), userData);
       
+      // Store uid_mappings so Firebase rules can resolve auth.uid → userKey
+      if (createdUid) {
+        await set(ref(database, `uid_mappings/${createdUid}`), userKey);
+      }
+      
       setNewUserEmail('');
       setNewUserPass('');
       setNewUserRole('scanner');
       setIsAddUserModalOpen(false);
-      addToast('success', 'User created successfully! No application access granted by default. Please assign applications in the Application Access tab.');
+      addToast('success', createdData.already_existed ? 'User already existed in Auth — profile updated successfully.' : 'User created successfully!');
     } catch (err: any) {
       console.error('Error adding user:', err);
-      addToast('error', 'Unable to create user. Please try again.');
+      addToast('error', err.message || 'Unable to create user. Please try again.');
     }
   };
 

@@ -29,6 +29,14 @@ class DisableUserRequest(BaseModel):
     target_email: str
     disabled: bool
 
+class LockUserRequest(BaseModel):
+    target_email: str
+    locked: bool
+
+class CreateUserRequest(BaseModel):
+    email: str
+    password: str
+
 def verify_admin(authorization: str = Header(None)):
     if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Invalid token")
@@ -466,3 +474,20 @@ async def admin_disable_user(req: DisableUserRequest, admin_user: dict = Depends
         return {"message": f"User {'disabled' if req.disabled else 'enabled'} successfully"}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+@app.post("/api/admin/create-user")
+async def admin_create_user(req: CreateUserRequest, admin_user: dict = Depends(verify_admin)):
+    try:
+        # Create user in Firebase Auth using Admin SDK (won't affect admin session)
+        user_record = firebase_auth.create_user(
+            email=req.email,
+            password=req.password
+        )
+        return {"uid": user_record.uid, "email": user_record.email, "message": "User created successfully"}
+    except firebase_auth.EmailAlreadyExistsError:
+        # User already exists — return their UID so the frontend can map it
+        user_record = firebase_auth.get_user_by_email(req.email)
+        return {"uid": user_record.uid, "email": user_record.email, "message": "User already exists", "already_existed": True}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+

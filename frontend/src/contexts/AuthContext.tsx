@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { auth, database, signInUser, registerUser as fbRegisterUser, logoutUser as fbLogoutUser } from '../lib/firebase';
 import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
-import { ref, onValue, off } from 'firebase/database';
+import { ref, onValue, off, set } from 'firebase/database';
 
 export interface UserProfile {
   name?: string;
@@ -88,7 +88,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const isOwner = currentUser.email.toLowerCase() === OWNER_EMAIL;
         
         // Setup database listener
-        const userKey = currentUser.email.toLowerCase().replace('.', '_');
+        // IMPORTANT: Must match the same key format used when creating users in AdminPanel
+        const userKey = currentUser.email.toLowerCase().replace(/[.#$[\]]/g, '_');
+        
+        // Ensure uid mapping is stored
+        set(ref(database, `uid_mappings/${currentUser.uid}`), userKey).catch(console.error);
+
         dbRef = ref(database, `users/${userKey}`);
         
         onValue(dbRef, (snapshot) => {
