@@ -183,6 +183,9 @@ export default function UserManagement({ userKey, onBack, currentUserEmail, isSy
     }
     try {
       // Update database - AuthContext listener will handle logout
+      // Note: Firebase Auth has no separate "locked" concept (only disabled)
+      // Lock enforcement relies on database flag + AuthContext validation
+      // For full Auth-layer enforcement, Firebase Custom Claims would be required (backend implementation)
       await update(ref(database, `users/${userKey}`), { locked: true });
       setUser({ ...user, locked: true });
       addToast('success', 'User account locked successfully. They will be logged out on next session refresh.');
@@ -279,42 +282,32 @@ export default function UserManagement({ userKey, onBack, currentUserEmail, isSy
     const isDisabling = !user.disabled;
     
     try {
-      // First, update the database
-      await update(ref(database, `users/${userKey}`), { disabled: isDisabling });
-      setUser({ ...user, disabled: isDisabling });
-      
-      // Try to call backend API to disable Firebase Auth (optional)
-      try {
-        const currentUser = auth.currentUser;
-        if (currentUser) {
-          const idToken = await currentUser.getIdToken();
-          const backendUrl = await getBackendUrl();
-          await fetch(`${backendUrl}/api/admin/disable-user`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${idToken}`
-            },
-            body: JSON.stringify({
-              target_email: user.email,
-              disabled: isDisabling
-            })
-          });
-        }
-      } catch (backendError) {
-        // Backend is optional - database update is sufficient
-        console.warn('Backend API unreachable for disable user, database update succeeded');
+      const currentUser = auth.currentUser;
+      if (!currentUser) throw new Error('Not logged in');
+      const idToken = await currentUser.getIdToken();
+      const backendUrl = await getBackendUrl();
+
+      const res = await fetch(`${backendUrl}/api/admin/disable-user`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
+        body: JSON.stringify({ target_email: user.email, disabled: isDisabling })
+      });
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.detail || 'Failed to update Firebase Auth account status.');
       }
 
-      addToast('success', isDisabling ? 'User disabled successfully. They will be logged out on next session refresh.' : 'User enabled successfully.');
+      // Only update the DB flag (and report success) after the real Auth-layer change succeeded
+      await update(ref(database, `users/${userKey}`), { disabled: isDisabling });
+      setUser({ ...user, disabled: isDisabling });
+      addToast('success', isDisabling ? 'User disabled successfully.' : 'User enabled successfully.');
       setShowDisableModal(false);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error toggling user status:', err);
-      addToast('error', 'Unable to update user status.');
+      addToast('error', err.message || 'Unable to update user status — backend service may be unavailable.');
       setShowDisableModal(false);
     }
   };
-
 
   const handleDeleteUser = async () => {
     if (!user) return;
