@@ -52,6 +52,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   useEffect(() => {
     let timeoutId: NodeJS.Timeout;
+    let validationInterval: NodeJS.Timeout;
     
     const resetTimer = () => {
       clearTimeout(timeoutId);
@@ -70,13 +71,24 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       resetTimer();
     }
 
+    // Periodic session validation - check if user was disabled/locked while logged in
+    if (user && userProfile && !isRecoveryMode) {
+      validationInterval = setInterval(async () => {
+        if (userProfile?.disabled || userProfile?.locked) {
+          await logout();
+          setLoginError(userProfile.disabled ? "Your account has been disabled by an administrator." : "Your account has been locked. Please contact support.");
+        }
+      }, 60000); // Check every minute
+    }
+
     return () => {
       clearTimeout(timeoutId);
+      clearInterval(validationInterval);
       window.removeEventListener("mousemove", resetTimer);
       window.removeEventListener("keydown", resetTimer);
       window.removeEventListener("scroll", resetTimer);
     };
-  }, [sessionTimeout, user]);
+  }, [sessionTimeout, user, userProfile, isRecoveryMode]);
 
   useEffect(() => {
     let dbRef: any = null;
@@ -89,7 +101,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         
         // Setup database listener
         // IMPORTANT: Must match the same key format used when creating users in AdminPanel
-        const userKey = currentUser.email.toLowerCase().replace(/[.#$[\]]/g, '_');
+        const userKey = currentUser.email.toLowerCase().replace(/[.#$\[\]]/g, '_');
         
         // Ensure uid mapping is stored
         set(ref(database, `uid_mappings/${currentUser.uid}`), userKey).catch(console.error);

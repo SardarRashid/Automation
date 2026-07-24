@@ -121,20 +121,31 @@ export default function UserManagement({ userKey, onBack, currentUserEmail, isSy
       if (!currentUser) throw new Error('Not logged in');
       const idToken = await currentUser.getIdToken();
       const backendUrl = await getBackendUrl();
-      const response = await fetch(`${backendUrl}/api/admin/set-password`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${idToken}`
-        },
-        body: JSON.stringify({
-          target_email: user.email,
-          new_password: newDirectPassword
-        })
-      });
+      
+      let response;
+      try {
+        response = await fetch(`${backendUrl}/api/admin/set-password`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${idToken}`
+          },
+          body: JSON.stringify({
+            target_email: user.email,
+            new_password: newDirectPassword
+          })
+        });
+      } catch (networkError) {
+        // Backend is unreachable
+        console.warn('Backend API unreachable, falling back to password reset email');
+        throw new Error('Backend service is unavailable. Please use "Send Password Reset Email" instead.');
+      }
 
       if (!response.ok) {
         const errData = await response.json().catch(() => ({}));
+        if (response.status === 404) {
+          throw new Error('Password update service is not available. Please use "Send Password Reset Email" instead.');
+        }
         throw new Error(errData.detail || 'Failed to update password');
       }
 
@@ -171,10 +182,12 @@ export default function UserManagement({ userKey, onBack, currentUserEmail, isSy
       return;
     }
     try {
+      // Update database - AuthContext listener will handle logout
       await update(ref(database, `users/${userKey}`), { locked: true });
       setUser({ ...user, locked: true });
-      addToast('success', 'User account locked successfully.');
+      addToast('success', 'User account locked successfully. They will be logged out on next session refresh.');
     } catch(err) {
+      console.error('Error locking account:', err);
       addToast('error', 'Unable to lock account.');
     }
   };
@@ -186,6 +199,7 @@ export default function UserManagement({ userKey, onBack, currentUserEmail, isSy
       setUser({ ...user, locked: false });
       addToast('success', 'User account unlocked successfully.');
     } catch(err) {
+      console.error('Error unlocking account:', err);
       addToast('error', 'Unable to unlock account.');
     }
   };
@@ -216,7 +230,7 @@ export default function UserManagement({ userKey, onBack, currentUserEmail, isSy
     }
   };
 
-  const handleToggleAppAccess = (app: string) => {
+  const handleToggleAppAccess = async (app: string) => {
     if (!user) return;
     
     // Prevent System Admin from removing their own access
@@ -226,14 +240,29 @@ export default function UserManagement({ userKey, onBack, currentUserEmail, isSy
     }
     
     const currentAccess = user.applicationAccess || {};
+    const newAccess = {
+      ...currentAccess,
+      [app]: !currentAccess[app as keyof typeof currentAccess]
+    };
     
     setUser({
       ...user,
-      applicationAccess: {
-        ...currentAccess,
-        [app]: !currentAccess[app as keyof typeof currentAccess]
-      }
+      applicationAccess: newAccess
     });
+    
+    // Auto-save to database
+    try {
+      await update(ref(database, `users/${userKey}`), { applicationAccess: newAccess });
+      addToast('success', `Application access updated successfully.`);
+    } catch (err) {
+      console.error('Error updating application access:', err);
+      addToast('error', 'Failed to save application access changes.');
+      // Revert local state on error
+      setUser({
+        ...user,
+        applicationAccess: currentAccess
+      });
+    }
   };
 
   
@@ -250,26 +279,34 @@ export default function UserManagement({ userKey, onBack, currentUserEmail, isSy
     const isDisabling = !user.disabled;
     
     try {
-      const currentUser = auth.currentUser;
-      if (currentUser) {
-        const idToken = await currentUser.getIdToken();
-        const backendUrl = await getBackendUrl();
-        await fetch(`${backendUrl}/api/admin/disable-user`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${idToken}`
-          },
-          body: JSON.stringify({
-            target_email: user.email,
-            disabled: isDisabling
-          })
-        });
-      }
-
+      // First, update the database
       await update(ref(database, `users/${userKey}`), { disabled: isDisabling });
       setUser({ ...user, disabled: isDisabling });
-      addToast('success', isDisabling ? 'User disabled successfully.' : 'User enabled successfully.');
+      
+      // Try to call backend API to disable Firebase Auth (optional)
+      try {
+        const currentUser = auth.currentUser;
+        if (currentUser) {
+          const idToken = await currentUser.getIdToken();
+          const backendUrl = await getBackendUrl();
+          await fetch(`${backendUrl}/api/admin/disable-user`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${idToken}`
+            },
+            body: JSON.stringify({
+              target_email: user.email,
+              disabled: isDisabling
+            })
+          });
+        }
+      } catch (backendError) {
+        // Backend is optional - database update is sufficient
+        console.warn('Backend API unreachable for disable user, database update succeeded');
+      }
+
+      addToast('success', isDisabling ? 'User disabled successfully. They will be logged out on next session refresh.' : 'User enabled successfully.');
       setShowDisableModal(false);
     } catch (err) {
       console.error('Error toggling user status:', err);

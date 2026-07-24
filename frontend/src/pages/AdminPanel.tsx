@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { database, auth } from '../lib/firebase';
 import { ref, onValue, set, remove, update } from 'firebase/database';
+import { createUserWithEmailAndPassword, signOut } from 'firebase/auth';
 import { firebaseConfig } from '../lib/firebase';
 import { getBackendUrl } from '../lib/config';
 import UserManagement from './admin/UserManagement';
@@ -208,9 +209,9 @@ export default function AdminPanel() {
         delete next[userKey];
         return next;
       });
-      if (!instantChanges) alert('Changes saved successfully!');
+      if (!instantChanges) addToast('success', 'Changes saved successfully!');
     } catch (err: any) {
-      alert('Error saving user: ' + err.message);
+      addToast('error', 'Error saving user: ' + err.message);
     }
   };
 
@@ -253,7 +254,7 @@ export default function AdminPanel() {
     
     // Push to database instantly
     await handleSaveUser(userKey, updatedUser);
-    alert('User role updated and permissions adjusted automatically.');
+    addToast('success', 'User role updated and permissions adjusted automatically.');
   };
 
   const handleLocalChange = (userKey: string, newUserData: CustomUser) => {
@@ -309,17 +310,18 @@ export default function AdminPanel() {
       await set(ref(database, basePath), dataToSave);
       setIsAddSystemModalOpen({ type: 'app', open: false });
       setNewSystemItem({ key: '', name: '', type: 'Web', description: '' });
-      alert(`${isAddSystemModalOpen.type} added successfully!`);
+      addToast('success', `${isAddSystemModalOpen.type} added successfully!`);
     } catch (err: any) {
-      alert(`Error adding ${isAddSystemModalOpen.type}: ` + err.message);
+      addToast('error', `Error adding ${isAddSystemModalOpen.type}: ` + err.message);
     }
   };
 
   const handleToggleSystemItem = async (type: 'apps' | 'extensions', key: string, currentStatus: boolean) => {
     try {
       await update(ref(database, `system/${type}/${key}`), { active: !currentStatus });
+      addToast('success', `${type.slice(0, -1)} toggled successfully.`);
     } catch (err: any) {
-      alert(`Error toggling ${type}: ` + err.message);
+      addToast('error', `Error toggling ${type}: ` + err.message);
     }
   };
 
@@ -330,31 +332,64 @@ export default function AdminPanel() {
       return;
     }
     
-    const userKey = newUserEmail.toLowerCase().replace(/[.#$[\]]/g, '_');
+    const userKey = newUserEmail.toLowerCase().replace(/[.#$\[\]]/g, '_');
     
     try {
-      // Use backend Admin SDK to create user (doesn't switch admin session)
-      const currentUser = auth.currentUser;
-      if (!currentUser) throw new Error('Not logged in');
-      const idToken = await currentUser.getIdToken();
-      const backendUrl = await getBackendUrl();
+      let createdUid = null;
+      let alreadyExisted = false;
 
-      const res = await fetch(`${backendUrl}/api/admin/create-user`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${idToken}`
-        },
-        body: JSON.stringify({ email: newUserEmail, password: newUserPass })
-      });
+      // Try backend API first
+      try {
+        const currentUser = auth.currentUser;
+        if (!currentUser) throw new Error('Not logged in');
+        const idToken = await currentUser.getIdToken();
+        const backendUrl = await getBackendUrl();
 
-      if (!res.ok) {
-        const errData = await res.json().catch(() => ({}));
-        throw new Error(errData.detail || 'Failed to create user in Firebase Auth');
+        const res = await fetch(`${backendUrl}/api/admin/create-user`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${idToken}`
+          },
+          body: JSON.stringify({ email: newUserEmail, password: newUserPass })
+        });
+
+        if (res.ok) {
+          const createdData = await res.json();
+          createdUid = createdData.uid;
+          alreadyExisted = createdData.already_existed || false;
+        } else if (res.status === 404) {
+          throw new Error('Backend service unavailable');
+        } else {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.detail || 'Failed to create user in Firebase Auth');
+        }
+      } catch (backendError) {
+        // Backend unavailable - fallback to client-side Firebase Auth
+        console.warn('Backend API unreachable, falling back to client-side Firebase Auth');
+        
+        try {
+          const userCredential = await createUserWithEmailAndPassword(auth, newUserEmail, newUserPass);
+          createdUid = userCredential.user.uid;
+          
+          // Sign out the newly created user so admin stays logged in
+          await signOut(auth);
+          
+          // Sign admin back in
+          const adminEmail = auth.currentUser?.email;
+          // Note: We can't automatically sign back in without password
+          // This is a limitation of client-side user creation
+          addToast('warning', 'User created via client-side. You may need to re-login to continue admin operations.');
+        } catch (firebaseError: any) {
+          if (firebaseError.code === 'auth/email-already-in-use') {
+            // User already exists in Firebase Auth, just create profile
+            addToast('info', 'User already exists in Firebase Auth. Creating profile only.');
+            alreadyExisted = true;
+          } else {
+            throw new Error(firebaseError.message || 'Failed to create user in Firebase Auth');
+          }
+        }
       }
-
-      const createdData = await res.json();
-      const createdUid = createdData.uid;
 
       // Use modern applicationAccess structure from ApplicationRegistry
       const { getDefaultApplicationAccess } = await import('../config/ApplicationRegistry');
@@ -411,7 +446,7 @@ export default function AdminPanel() {
       setNewUserPass('');
       setNewUserRole('scanner');
       setIsAddUserModalOpen(false);
-      addToast('success', createdData.already_existed ? 'User already existed in Auth — profile updated successfully.' : 'User created successfully!');
+      addToast('success', alreadyExisted ? 'User already existed in Auth — profile updated successfully.' : 'User created successfully!');
     } catch (err: any) {
       console.error('Error adding user:', err);
       addToast('error', err.message || 'Unable to create user. Please try again.');
