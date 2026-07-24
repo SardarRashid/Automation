@@ -16,9 +16,17 @@ import firebase_admin
 from firebase_admin import credentials, auth as firebase_auth, db as firebase_db
 
 if not firebase_admin._apps:
-    # Initialize with default credentials
-    firebase_admin.initialize_app(options={
-        'databaseURL': 'https://automation-suit-cece7-default-rtdb.firebaseio.com'
+    service_account_json = os.environ.get("FIREBASE_SERVICE_ACCOUNT_JSON")
+    if not service_account_json:
+        raise RuntimeError(
+            "FIREBASE_SERVICE_ACCOUNT_JSON environment variable is not set. "
+            "Generate a service account key in Firebase Console > Project Settings > "
+            "Service Accounts, and set its full JSON content as this env var on Render "
+            "(Render dashboard > this service > Environment). Do NOT commit the key file to the repo."
+        )
+    cred = credentials.Certificate(json.loads(service_account_json))
+    firebase_admin.initialize_app(cred, options={
+        'databaseURL': 'https://automation-suit-cece7-default-rtdb.asia-southeast1.firebasedatabase.app'
     })
 
 class SetPasswordRequest(BaseModel):
@@ -51,12 +59,17 @@ def verify_admin(authorization: str = Header(None)):
         return decoded
     
     uid = decoded.get("uid")
-    # Read user role from DB
+    # Resolve UID to userKey via uid_mappings, then read user role from DB
     try:
-        user_ref = firebase_db.reference(f'users/{uid}')
+        user_key = firebase_db.reference(f'uid_mappings/{uid}').get()
+        if not user_key:
+            raise HTTPException(status_code=403, detail="No profile mapping found for this account.")
+        user_ref = firebase_db.reference(f'users/{user_key}')
         user_data = user_ref.get()
         if user_data and user_data.get('role') in ['admin', 'system_admin']:
             return decoded
+    except HTTPException:
+        raise
     except Exception as e:
         pass
         
