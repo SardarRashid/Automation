@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { database, auth } from '../lib/firebase';
 import { ref, onValue, set, remove, update } from 'firebase/database';
-import { createUserWithEmailAndPassword, signOut } from 'firebase/auth';
-import { firebaseConfig } from '../lib/firebase';
 import { getBackendUrl } from '../lib/config';
 import UserManagement from './admin/UserManagement';
 import SystemSettings from './admin/SystemSettings';
@@ -338,58 +336,33 @@ export default function AdminPanel() {
       let createdUid = null;
       let alreadyExisted = false;
 
-      // Try backend API first
-      try {
-        const currentUser = auth.currentUser;
-        if (!currentUser) throw new Error('Not logged in');
-        const idToken = await currentUser.getIdToken();
-        const backendUrl = await getBackendUrl();
+      // Backend API is REQUIRED for secure user creation
+      // Client-side fallback removed to prevent permission escalation bug
+      const currentUser = auth.currentUser;
+      if (!currentUser) throw new Error('Not logged in');
+      const idToken = await currentUser.getIdToken();
+      const backendUrl = await getBackendUrl();
 
-        const res = await fetch(`${backendUrl}/api/admin/create-user`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${idToken}`
-          },
-          body: JSON.stringify({ email: newUserEmail, password: newUserPass })
-        });
+      const res = await fetch(`${backendUrl}/api/admin/create-user`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${idToken}`
+        },
+        body: JSON.stringify({ email: newUserEmail, password: newUserPass })
+      });
 
-        if (res.ok) {
-          const createdData = await res.json();
-          createdUid = createdData.uid;
-          alreadyExisted = createdData.already_existed || false;
-        } else if (res.status === 404) {
-          throw new Error('Backend service unavailable');
-        } else {
-          const errData = await res.json().catch(() => ({}));
-          throw new Error(errData.detail || 'Failed to create user in Firebase Auth');
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        if (res.status === 404) {
+          throw new Error('Backend service is unavailable. User creation requires the backend API to be running. Please contact your system administrator.');
         }
-      } catch (backendError) {
-        // Backend unavailable - fallback to client-side Firebase Auth
-        console.warn('Backend API unreachable, falling back to client-side Firebase Auth');
-        
-        try {
-          const userCredential = await createUserWithEmailAndPassword(auth, newUserEmail, newUserPass);
-          createdUid = userCredential.user.uid;
-          
-          // Sign out the newly created user so admin stays logged in
-          await signOut(auth);
-          
-          // Sign admin back in
-          const adminEmail = auth.currentUser?.email;
-          // Note: We can't automatically sign back in without password
-          // This is a limitation of client-side user creation
-          addToast('warning', 'User created via client-side. You may need to re-login to continue admin operations.');
-        } catch (firebaseError: any) {
-          if (firebaseError.code === 'auth/email-already-in-use') {
-            // User already exists in Firebase Auth, just create profile
-            addToast('info', 'User already exists in Firebase Auth. Creating profile only.');
-            alreadyExisted = true;
-          } else {
-            throw new Error(firebaseError.message || 'Failed to create user in Firebase Auth');
-          }
-        }
+        throw new Error(errData.detail || 'Failed to create user in Firebase Auth');
       }
+
+      const createdData = await res.json();
+      createdUid = createdData.uid;
+      alreadyExisted = createdData.already_existed || false;
 
       // Use modern applicationAccess structure from ApplicationRegistry
       const { getDefaultApplicationAccess } = await import('../config/ApplicationRegistry');

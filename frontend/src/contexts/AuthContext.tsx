@@ -78,7 +78,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           await logout();
           setLoginError(userProfile.disabled ? "Your account has been disabled by an administrator." : "Your account has been locked. Please contact support.");
         }
-      }, 60000); // Check every minute
+      }, 10000); // Check every 10 seconds for better security
     }
 
     return () => {

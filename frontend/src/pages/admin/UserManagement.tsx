@@ -657,14 +657,6 @@ export default function UserManagement({ userKey, onBack, currentUserEmail, isSy
                     <p className="text-sm text-slate-500">Send a password reset link to user's email</p>
                   </button>
                   <button
-                    onClick={() => setShowSetPasswordModal(true)}
-                    className="p-4 bg-slate-50 hover:bg-slate-100 rounded-lg text-left transition-colors"
-                  >
-                    <Lock className="w-6 h-6 text-slate-600 mb-2" />
-                    <p className="font-semibold text-slate-900">Set Password Directly</p>
-                    <p className="text-sm text-slate-500">Instantly change the user's password (requires API)</p>
-                  </button>
-                  <button
                     onClick={handleForcePasswordChange}
                     className="p-4 bg-slate-50 hover:bg-slate-100 rounded-lg text-left transition-colors"
                   >
