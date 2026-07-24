@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Upload, Trash2, Package, CheckCircle, Clock, UserPlus } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import JSZip from 'jszip';
-import { firebaseConfig, auth } from '../lib/firebase';
+import { firebaseConfig, auth, database } from '../lib/firebase';
+import { ref, get, set, update, remove } from 'firebase/database';
 
 const DB_URL = "https://automation-suit-cece7-default-rtdb.asia-southeast1.firebasedatabase.app";
 
@@ -98,8 +99,8 @@ export default function ScannerTracking() {
         
         const allBranches = ['Dammam', 'Riyadh', 'Jeddah'];
         for (const b of allBranches) {
-          const res = await fetch(`${DB_URL}/scanner_trips/${b}/${today}/orders.json`);
-          const data = await res.json();
+          const snapshot = await get(ref(database, `scanner_trips/${b}/${today}/orders`));
+          const data = snapshot.val();
           if (data) {
             const bList = Object.keys(data).map(k => ({ ...data[k], orderNumber: k, _branchName: b }));
             orderList = orderList.concat(bList);
@@ -289,11 +290,11 @@ export default function ScannerTracking() {
           return;
         }
 
-        await fetch(`${DB_URL}/scanner_trips/${uploadBranch}/${today}/orders.json`, {
-          method: isReplace ? 'PUT' : 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(finalUpdates)
-        });
+        if (isReplace) {
+          await set(ref(database, `scanner_trips/${uploadBranch}/${today}/orders`), finalUpdates);
+        } else {
+          await update(ref(database, `scanner_trips/${uploadBranch}/${today}/orders`), finalUpdates);
+        }
         alert(`Successfully ${isReplace ? 'replaced' : 'appended'} ${Object.keys(finalUpdates).length} orders for ${uploadBranch}!`);
       } else {
         alert('EMPTY_FILE: No valid orders found in the file.');
@@ -311,8 +312,8 @@ export default function ScannerTracking() {
     
     setLoading(true);
     try {
-      const res = await fetch(`${DB_URL}/scanner_trips/${uploadBranch}.json`);
-      const allDates = await res.json();
+      const snapshot = await get(ref(database, `scanner_trips/${uploadBranch}`));
+      const allDates = snapshot.val();
       if (allDates) {
         const twoDaysAgo = new Date();
         twoDaysAgo.setDate(twoDaysAgo.getDate() - 2);
@@ -320,9 +321,7 @@ export default function ScannerTracking() {
         for (const dateStr of Object.keys(allDates)) {
           const d = new Date(dateStr);
           if (d < twoDaysAgo) {
-            await fetch(`${DB_URL}/scanner_trips/${uploadBranch}/${dateStr}.json`, {
-              method: 'DELETE'
-            });
+            await remove(ref(database, `scanner_trips/${uploadBranch}/${dateStr}`));
           }
         }
         alert("Cleanup complete!");
@@ -336,9 +335,7 @@ export default function ScannerTracking() {
   const handleMasterWipe = async () => {
     setLoading(true);
     try {
-      await fetch(`${DB_URL}/scanner_trips/${uploadBranch}.json`, {
-        method: 'DELETE'
-      });
+      await remove(ref(database, `scanner_trips/${uploadBranch}`));
       alert(`All data for ${uploadBranch} has been permanently deleted.`);
       setShowWipeConfirm(false);
     } catch(err) {
@@ -364,11 +361,7 @@ export default function ScannerTracking() {
           uploadTime: new Date().toISOString()
         }
       };
-      await fetch(`${DB_URL}/scanner_trips/${uploadBranch}/${today}/orders.json`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(updates)
-      });
+      await update(ref(database, `scanner_trips/${uploadBranch}/${today}/orders`), updates);
       setManualStatus(`Order ${manualOrder} added!`);
       setManualOrder(''); setManualTrip(''); setManualAssoc(''); setManualTerritory(''); setManualSeq('');
       setTimeout(() => setManualStatus(''), 3000);
@@ -385,32 +378,36 @@ export default function ScannerTracking() {
     setLoading(true);
     setNuStatus('Creating user...');
     try {
+      const { createUserWithoutSwitchingSession } = await import('../lib/createUserIsolated');
       
-      const signUpResponse = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${firebaseConfig.apiKey}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: nuEmail,
-          password: nuPassword,
-          returnSecureToken: true
-        })
-      });
-      const signUpData = await signUpResponse.json();
-      if (!signUpResponse.ok) throw new Error(signUpData.error?.message || 'Failed to create user');
+      let createdUser;
+      try {
+        createdUser = await createUserWithoutSwitchingSession(nuEmail, nuPassword);
+      } catch (authError: any) {
+        if (authError.code === 'auth/email-already-in-use') {
+          console.log('User already exists in Firebase Auth, updating profile');
+        } else {
+          throw new Error(authError.message || 'Failed to create Firebase Auth user');
+        }
+      }
 
-      const dbKey = nuEmail.replace(/\./g, ',');
+      // Add user to database
+      const userKey = nuEmail.toLowerCase().replace(/[.#$\[\]]/g, '_');
+      
+      // Save uid_mapping if createdUser has uid
+      if (createdUser && createdUser.uid) {
+        await set(ref(database, `uid_mappings/${createdUser.uid}`), userKey);
+      }
       const finalBranch = nuRole === 'admin' ? 'All Branches' : nuBranch;
-      await fetch(`${DB_URL}/users/${dbKey}.json`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: nuName,
-          email: nuEmail,
-          app_user: true,
-          app_role: nuRole,
-          branch: finalBranch,
-          blocked: false
-        })
+      await update(ref(database, `users/${userKey}`), {
+        name: nuName,
+        email: nuEmail,
+        app_user: true,
+        app_role: nuRole,
+        branch: finalBranch,
+        blocked: false,
+        role: 'scanner',
+        disabled: false
       });
       setNuStatus('User created successfully!');
       setNuName(''); setNuEmail(''); setNuPassword('');

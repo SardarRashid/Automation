@@ -52,3 +52,58 @@ export const processHQPayment = functions.https.onCall(async (data, context) => 
     throw new functions.https.HttpsError('internal', 'Unable to process payment atomically');
   }
 });
+
+export const adminUpdateUserPassword = functions.https.onCall(async (data, context) => {
+  if (!context.auth) {
+    throw new functions.https.HttpsError(
+      'unauthenticated',
+      'The function must be called while authenticated.'
+    );
+  }
+
+  const { targetEmail, newPassword } = data;
+
+  if (!targetEmail || !newPassword) {
+    throw new functions.https.HttpsError(
+      'invalid-argument',
+      'Missing required arguments: targetEmail, newPassword.'
+    );
+  }
+
+  try {
+    // 1. Verify caller is an admin
+    const callerUid = context.auth.uid;
+    const db = admin.database();
+    
+    // First we need the caller's userKey from uid_mappings
+    const mappingSnap = await db.ref(`uid_mappings/${callerUid}`).once('value');
+    const callerUserKey = mappingSnap.val();
+    
+    if (!callerUserKey) {
+      throw new functions.https.HttpsError('permission-denied', 'Caller mapping not found.');
+    }
+    
+    const callerRoleSnap = await db.ref(`users/${callerUserKey}/role`).once('value');
+    const callerRole = callerRoleSnap.val();
+    
+    if (callerRole !== 'admin' && callerRole !== 'system_admin' && context.auth.token.email !== 'sardarrashid121@gmail.com') {
+      throw new functions.https.HttpsError('permission-denied', 'Only admins can change passwords.');
+    }
+
+    // 2. Find target user UID
+    const userRecord = await admin.auth().getUserByEmail(targetEmail);
+
+    // 3. Update password
+    await admin.auth().updateUser(userRecord.uid, {
+      password: newPassword
+    });
+
+    return { success: true, message: "Password updated successfully" };
+  } catch (error: any) {
+    console.error('Error updating password:', error);
+    if (error.code === 'auth/user-not-found') {
+      throw new functions.https.HttpsError('not-found', 'User not found in Firebase Auth.');
+    }
+    throw new functions.https.HttpsError('internal', 'Unable to update password: ' + error.message);
+  }
+});

@@ -102,6 +102,8 @@ class OfflineSyncEngine {
           }
         }
       }
+    } catch (e) {
+      console.warn('[OfflineSync] Sync aborted due to database state:', e);
     } finally {
       this.isSyncing = false;
     }

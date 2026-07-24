@@ -10,7 +10,25 @@ export default defineConfig({
       includeAssets: ['favicon.svg'],
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
-        maximumFileSizeToCacheInBytes: 5000000
+        maximumFileSizeToCacheInBytes: 5000000,
+        // Force new service worker to activate immediately on next deploy
+        // — no manual cache-clear or tab-close required
+        skipWaiting: true,
+        clientsClaim: true,
+        // Keep Firebase RTDB responses cached for offline use (NetworkFirst = live data
+        // is preferred, but falls back to cache if offline — data is NEVER cleared by SW updates)
+        runtimeCaching: [
+          {
+            urlPattern: /^https:\/\/.*\.firebasedatabase\.app\/.*/i,
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'firebase-rtdb-cache',
+              networkTimeoutSeconds: 10,
+              expiration: { maxEntries: 200, maxAgeSeconds: 7 * 24 * 60 * 60 },
+              cacheableResponse: { statuses: [0, 200] }
+            }
+          }
+        ]
       },
       manifest: {
         name: 'Inventory & Scanner Suite',

@@ -119,6 +119,8 @@ import { exportDailySalesToExcel } from '../utils/exportExcel';
 
 
 export default function SalesmanAdmin() {
+  const [isMounted, setIsMounted] = useState(false);
+  useEffect(() => { setIsMounted(true); }, []);
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<'dashboard'|'spreadsheet'>('dashboard');
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
@@ -1182,8 +1184,8 @@ export default function SalesmanAdmin() {
                     <div className="h-full flex items-center justify-center text-xs text-slate-400 border border-dashed border-slate-150 rounded-3xl">
                       No customer invoice stream orders submitted. Complete checkout to test visualization.
                     </div>
-                  ) : (
-                    <ResponsiveContainer width="99%" height={256}>
+                  ) : isMounted ? (
+                    <ResponsiveContainer width="99%" height={256} minWidth={0}>
                       {chartType === 'area' ? (
                         <AreaChart data={chartsData.dailyTrend} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
                           <defs>
@@ -1261,7 +1263,7 @@ export default function SalesmanAdmin() {
                         </BarChart>
                       )}
                     </ResponsiveContainer>
-                  )}
+                  ) : null}
                 </div>
               </div>
 
@@ -1279,8 +1281,8 @@ export default function SalesmanAdmin() {
                     <div className="h-full flex items-center justify-center text-xs text-slate-400 border border-dashed border-slate-150 rounded-3xl">
                       No categorical division data yet
                     </div>
-                  ) : (
-                    <ResponsiveContainer width="99%" height={256}>
+                  ) : isMounted ? (
+                    <ResponsiveContainer width="99%" height={256} minWidth={0}>
                       <BarChart data={chartsData.categoryBreakdown} layout="vertical" margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
                         <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f1f5f9" />
                         <XAxis type="number" stroke="#94a3b8" fontSize={9} tickLine={false} tickFormatter={(v) => `${v} SAR`} />
@@ -1292,7 +1294,7 @@ export default function SalesmanAdmin() {
                         <Bar dataKey="Value" fill="#15803D" radius={[0, 6, 6, 0]} />
                       </BarChart>
                     </ResponsiveContainer>
-                  )}
+                  ) : null}
                 </div>
               </div>
             </div>
@@ -3082,6 +3084,7 @@ export default function SalesmanAdmin() {
       </div>
   );
 }
+
 
 
 

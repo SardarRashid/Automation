@@ -1,4 +1,4 @@
-import { useState, Suspense, lazy } from 'react';
+import { useState, Suspense, lazy, useEffect } from 'react';
 import { useAuth } from './contexts/AuthContext';
 import { getApplicationsForUser } from './config/ApplicationRegistry';
 import { ToastProvider } from './components/ui/ToastNotification';
@@ -59,6 +59,26 @@ function App() {
   const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
     return localStorage.getItem('app_dark_mode') === 'true';
   });
+
+  useEffect(() => {
+    const titles: Record<string, string> = {
+      'main_dashboard': 'Business Dashboard',
+      'reports': 'Report Engine',
+      'invoices': 'PO & Invoices',
+      'request_forms': 'Request Forms',
+      'reminders': 'Reminders',
+      'notes': 'Notes',
+      'profile': 'Profile Settings',
+      'app_hub': 'Apps & Extensions',
+      'scanner_tracking': 'Scanner Tracking',
+      'salesman_admin': 'Sales Admin',
+      'central_reports': 'Central Reports',
+      'salesman_mobile': 'Salesman App',
+      'inventory_app': 'Inventory App',
+      'admin': 'Admin Panel'
+    };
+    document.title = titles[activeTab] || 'Inventory Suite';
+  }, [activeTab]);
 
   const toggleDarkMode = () => {
     const newMode = !isDarkMode;
@@ -293,13 +313,13 @@ function App() {
                     <AccessDenied onReturn={() => setActiveTab('app_hub')} />
                   ) : null}
                   
-                  {activeTab === 'reports' && (isSystemAdmin || applicationAccess.reports || applicationAccess.exportHub) ? (
+                  {activeTab === 'reports' && (isSystemAdmin || applicationAccess.reports) ? (
                     <ReportGenerator sharedActionFile={reportsFile} setSharedActionFile={setReportsFile} />
                   ) : activeTab === 'reports' ? (
                     <AccessDenied onReturn={() => setActiveTab('app_hub')} />
                   ) : null}
                   
-                  {activeTab === 'invoices' && (isSystemAdmin || applicationAccess.poInvoice || applicationAccess.invoiceGenerator) ? (
+                  {activeTab === 'invoices' && (isSystemAdmin || applicationAccess.poInvoice) ? (
                     <POProcessor sharedActionFile={invoicesFile} setSharedActionFile={setInvoicesFile} />
                   ) : activeTab === 'invoices' ? (
                     <AccessDenied onReturn={() => setActiveTab('app_hub')} />
@@ -329,13 +349,13 @@ function App() {
                     <AccessDenied onReturn={() => setActiveTab('app_hub')} />
                   ) : null}
                   
-                  {activeTab === 'app_hub' && (isSystemAdmin || applicationAccess.appHub || applicationAccess.extensions) ? (
+                  {activeTab === 'app_hub' && (isSystemAdmin || applicationAccess.appHub) ? (
                     <AppHub onNavigate={setActiveTab} />
                   ) : activeTab === 'app_hub' ? (
                     <AccessDenied onReturn={() => setActiveTab('')} />
                   ) : null}
                   
-                  {activeTab === 'scanner_tracking' && (isSystemAdmin || applicationAccess.scanner || applicationAccess.scannerAdmin) ? (
+                  {activeTab === 'scanner_tracking' && (isSystemAdmin || applicationAccess.scanner) ? (
                     <ScannerTracking />
                   ) : activeTab === 'scanner_tracking' ? (
                     <AccessDenied onReturn={() => setActiveTab('app_hub')} />
@@ -349,7 +369,7 @@ function App() {
                     <AccessDenied onReturn={() => setActiveTab('app_hub')} />
                   ) : null}
                   
-                  {activeTab === 'central_reports' && (isSystemAdmin || applicationAccess.centralReports || applicationAccess.salesAdmin) ? (
+                  {activeTab === 'central_reports' && (isSystemAdmin || applicationAccess.salesAdmin) ? (
                     <SalesmanAdminProvider>
                       <CentralReportsHub />
                     </SalesmanAdminProvider>

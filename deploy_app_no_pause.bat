@@ -60,31 +60,6 @@ if %errorlevel% neq 0 (
 
 echo.
 echo ==============================================================
-echo [SUCCESS] Both frontend applications have been built and deployed!
+echo [SUCCESS] Both applications have been built and deployed!
 echo ==============================================================
-
-:: 3. Deploy Backend to Render via GitHub
-echo.
-echo --------------------------------------------------------------
-echo  Deploying Backend to Render (via GitHub push)
-echo --------------------------------------------------------------
-cd /d "%~dp0"
-
-echo [5/5] Committing and pushing backend changes to GitHub...
-git add backend/main.py frontend/src/contexts/AuthContext.tsx frontend/src/pages/AdminPanel.tsx frontend/src/pages/admin/UserManagement.tsx database.rules.json
-git commit -m "Deploy: update backend admin endpoints and frontend fixes"
-git push origin main
-if %errorlevel% neq 0 (
-    echo.
-    echo [WARN] Git push failed or nothing new to push.
-) else (
-    echo [SUCCESS] Backend pushed! Render will auto-deploy in ~2-3 minutes.
-    echo Monitor at: https://dashboard.render.com
-)
-
-echo.
-echo ==============================================================
-echo [DONE] Full deployment complete!
-echo ==============================================================
-pause
 

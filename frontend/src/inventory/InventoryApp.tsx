@@ -46,7 +46,10 @@ export default function InventoryApp({ currentUser: globalUser, onLogout: global
 
 
   useEffect(() => {
-    if (!inventorySession) return;
+    if (!inventorySession) {
+      setIsLoading(false); // Not logged in — stop spinner
+      return;
+    }
     setActiveTab("dashboard");
     setForceMobileMode(false);
   }, [inventorySession]);
@@ -61,6 +64,8 @@ export default function InventoryApp({ currentUser: globalUser, onLogout: global
         setStoreRooms(rooms);
       } catch (err) {
         console.error(err);
+      } finally {
+        setIsLoading(false); // Always stop loading
       }
     }
     loadInitialData();
