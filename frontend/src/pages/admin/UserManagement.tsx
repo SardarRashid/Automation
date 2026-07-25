@@ -122,34 +122,24 @@ export default function UserManagement({ userKey, onBack, currentUserEmail, isSy
       const idToken = await currentUser.getIdToken();
       const backendUrl = await getBackendUrl();
       
-      let response;
-      try {
-        response = await fetch(`${backendUrl}/api/admin/set-password`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${idToken}`
-          },
-          body: JSON.stringify({
-            target_email: user.email,
-            new_password: newDirectPassword
-          })
-        });
-      } catch (networkError) {
-        // Backend is unreachable
-        console.warn('Backend API unreachable, falling back to password reset email');
-        throw new Error('Backend service is unavailable. Please use "Send Password Reset Email" instead.');
-      }
+      const response = await fetch(`${backendUrl}/api/admin/set-password`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${idToken}`
+        },
+        body: JSON.stringify({
+          target_email: user.email,
+          new_password: newDirectPassword
+        })
+      });
 
       if (!response.ok) {
         const errData = await response.json().catch(() => ({}));
-        if (response.status === 404) {
-          throw new Error('Password update service is not available. Please use "Send Password Reset Email" instead.');
-        }
-        throw new Error(errData.detail || 'Failed to update password');
+        throw new Error(errData.detail || 'Failed to update password. Try "Send Password Reset Email" instead.');
       }
 
-      addToast('success', 'Password updated successfully via admin API.');
+      addToast('success', 'Password updated successfully.');
       setShowSetPasswordModal(false);
       setNewDirectPassword('');
     } catch (err: any) {
@@ -648,6 +638,14 @@ export default function UserManagement({ userKey, onBack, currentUserEmail, isSy
                     <Key className="w-6 h-6 text-slate-600 mb-2" />
                     <p className="font-semibold text-slate-900">Send Password Reset Email</p>
                     <p className="text-sm text-slate-500">Send a password reset link to user's email</p>
+                  </button>
+                  <button
+                    onClick={() => setShowSetPasswordModal(true)}
+                    className="p-4 bg-slate-50 hover:bg-slate-100 rounded-lg text-left transition-colors"
+                  >
+                    <Lock className="w-6 h-6 text-slate-600 mb-2" />
+                    <p className="font-semibold text-slate-900">Set Password Directly</p>
+                    <p className="text-sm text-slate-500">Instantly change the user's password (requires backend)</p>
                   </button>
                   <button
                     onClick={handleForcePasswordChange}
