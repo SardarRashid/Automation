@@ -1730,8 +1730,57 @@ class EcomInvoiceProcessor:
                             if inv_date:
                                 order_details.append(["التاريخ", inv_date])
 
-                    for page in pdf.pages:
-                        text = page.extract_text()
+                    for page_idx, page in enumerate(pdf.pages):
+                        tables = page.extract_tables()
+                        for table in tables:
+                            is_items_table = False
+                            header_idx = -1
+                            for i, row in enumerate(table):
+                                row_str = " ".join([str(c).lower() for c in row if c])
+                                if ("desc" in row_str or "item" in row_str or "title" in row_str or "وصف" in row_str or "صنف" in row_str) and ("qty" in row_str or "quantity" in row_str or "كمية" in row_str):
+                                    is_items_table = True
+                                    header_idx = i
+                                    break
+                            
+                            if is_items_table:
+                                header_row = table[header_idx]
+                                desc_col_idx = -1
+                                qty_col_idx = -1
+                                price_col_idx = -1
+                                val_col_idx = -1
+                                
+                                for idx, val in enumerate(header_row):
+                                    if not val: continue
+                                    v_str = str(val).lower().replace('\n', ' ').strip()
+                                    if any(x in v_str for x in ["title", "desc", "item", "product", "وصف", "صنف"]):
+                                        if "sku" not in v_str and "code" not in v_str and "كود" not in v_str:
+                                            desc_col_idx = idx
+                                    elif any(x in v_str for x in ["qty", "quantity", "كمية"]):
+                                        qty_col_idx = idx
+                                    elif any(x in v_str for x in ["price", "rate", "سعر"]):
+                                        price_col_idx = idx
+                                    elif any(x in v_str for x in ["total", "amount", "value", "صافي", "اجمالي", "إجمالي"]):
+                                        val_col_idx = idx
+                                        
+                                if desc_col_idx != -1 and qty_col_idx != -1:
+                                    for row in table[header_idx+1:]:
+                                        if len(row) > max(desc_col_idx, qty_col_idx):
+                                            desc = str(row[desc_col_idx]).strip() if row[desc_col_idx] else ""
+                                            if not desc: continue
+                                            if desc.lower() in ["total", "subtotal", "الإجمالي", "الاجمالي", "discount", "خصم"]: continue
+                                            
+                                            qty = str(row[qty_col_idx]).strip() if row[qty_col_idx] else "0"
+                                            price = str(row[price_col_idx]).replace(',', '').strip() if price_col_idx != -1 and row[price_col_idx] else "0"
+                                            val = str(row[val_col_idx]).replace(',', '').strip() if val_col_idx != -1 and row[val_col_idx] else "0"
+                                            
+                                            eng_name = re.sub(r'[\u0600-\u06FF\uFB50-\uFDFF\uFE70-\uFEFF]+', '', desc).strip()
+                                            eng_name = re.sub(r'\s+', ' ', eng_name)
+                                            
+                                            po_data.append({"desc": eng_name, "qty": qty, "price": price, "value": val})
+
+                    if not po_data:
+                        for page in pdf.pages:
+                            text = page.extract_text()
                         if not text: continue
                         for line in text.split('\n'):
                             # Match lines starting with a number and ending with at least 4 numbers (qty, price, discount, total...)
