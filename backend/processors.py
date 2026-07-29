@@ -1781,74 +1781,74 @@ class EcomInvoiceProcessor:
                     if not po_data:
                         for page in pdf.pages:
                             text = page.extract_text()
-                        if not text: continue
-                        for line in text.split('\n'):
-                            # Match lines starting with a number and ending with at least 4 numbers (qty, price, discount, total...)
-                            match = re.match(r'^(\d+\s+)?(.+?)\s+((?:[\d.,]+\s*){4,})$', line.strip(), re.IGNORECASE)
-                            if match:
-                                full_name = match.group(2)
-                                numbers_str = match.group(3).strip()
-                                nums = re.split(r'\s+', numbers_str)
+                            if not text: continue
+                            for line in text.split('\n'):
+                                # Match lines starting with a number and ending with at least 4 numbers (qty, price, discount, total...)
+                                match = re.match(r'^(\d+\s+)?(.+?)\s+((?:[\d.,]+\s*){4,})$', line.strip(), re.IGNORECASE)
+                                if match:
+                                    full_name = match.group(2)
+                                    numbers_str = match.group(3).strip()
+                                    nums = re.split(r'\s+', numbers_str)
                                 
-                                last_word_match = re.search(r'([A-Za-z\u0600-\u06FF]+)([\d.,]+)$', full_name)
-                                if last_word_match:
-                                    qty_from_name = last_word_match.group(2)
-                                    full_name = full_name[:-len(qty_from_name)].strip()
-                                    nums.insert(0, qty_from_name)
+                                    last_word_match = re.search(r'([A-Za-z\u0600-\u06FF]+)([\d.,]+)$', full_name)
+                                    if last_word_match:
+                                        qty_from_name = last_word_match.group(2)
+                                        full_name = full_name[:-len(qty_from_name)].strip()
+                                        nums.insert(0, qty_from_name)
                                 
-                                if len(nums) < 2: continue
-                                qty_val = nums[0]
-                                price_val = nums[1]
+                                    if len(nums) < 2: continue
+                                    qty_val = nums[0]
+                                    price_val = nums[1]
                                 
-                                # Dynamically identify the "Total Amount Before VAT" column
-                                qty_f = 0.0
-                                price_f = 0.0
-                                try: qty_f = float(qty_val.replace(',', ''))
-                                except: pass
-                                try: price_f = float(price_val.replace(',', ''))
-                                except: pass
-                                
-                                gross = qty_f * price_f
-                                best_val = None
-                                
-                                # Search for the exact gross value (Qty * Price)
-                                for n_str in nums[2:]:
-                                    try:
-                                        n_f = float(n_str.replace(',', ''))
-                                        if abs(n_f - gross) < 0.02:
-                                            best_val = n_str
-                                            break
+                                    # Dynamically identify the "Total Amount Before VAT" column
+                                    qty_f = 0.0
+                                    price_f = 0.0
+                                    try: qty_f = float(qty_val.replace(',', ''))
                                     except: pass
-                                    
-                                # If gross not found, maybe there is a discount (assuming nums[2] is discount)
-                                if best_val is None and len(nums) > 3:
-                                    try:
-                                        discount = float(nums[2].replace(',', ''))
-                                        net = gross - discount
-                                        for n_str in nums[3:]:
-                                            try:
-                                                n_f = float(n_str.replace(',', ''))
-                                                if abs(n_f - net) < 0.02:
-                                                    best_val = n_str
-                                                    break
-                                            except: pass
+                                    try: price_f = float(price_val.replace(',', ''))
                                     except: pass
-                                    
-                                if best_val is None:
-                                    # Fallback
-                                    best_val = nums[3] if len(nums) >= 4 else nums[-1]
-                                    
-                                value_val = best_val
                                 
-                                eng_name = re.sub(r'[\u0600-\u06FF\uFB50-\uFDFF\uFE70-\uFEFF]+', '', full_name).strip()
-                                eng_name = re.sub(r'^\d+\s+', '', eng_name)
-                                eng_name = re.sub(r'\s+', ' ', eng_name)
-                                po_data.append({
-                                    "desc": eng_name,
-                                    "qty": qty_val,
-                                    "price": price_val,
-                                    "value": value_val
-                                })
+                                    gross = qty_f * price_f
+                                    best_val = None
+                                
+                                    # Search for the exact gross value (Qty * Price)
+                                    for n_str in nums[2:]:
+                                        try:
+                                            n_f = float(n_str.replace(',', ''))
+                                            if abs(n_f - gross) < 0.02:
+                                                best_val = n_str
+                                                break
+                                        except: pass
+                                    
+                                    # If gross not found, maybe there is a discount (assuming nums[2] is discount)
+                                    if best_val is None and len(nums) > 3:
+                                        try:
+                                            discount = float(nums[2].replace(',', ''))
+                                            net = gross - discount
+                                            for n_str in nums[3:]:
+                                                try:
+                                                    n_f = float(n_str.replace(',', ''))
+                                                    if abs(n_f - net) < 0.02:
+                                                        best_val = n_str
+                                                        break
+                                                except: pass
+                                        except: pass
+                                    
+                                    if best_val is None:
+                                        # Fallback
+                                        best_val = nums[3] if len(nums) >= 4 else nums[-1]
+                                    
+                                    value_val = best_val
+                                
+                                    eng_name = re.sub(r'[\u0600-\u06FF\uFB50-\uFDFF\uFE70-\uFEFF]+', '', full_name).strip()
+                                    eng_name = re.sub(r'^\d+\s+', '', eng_name)
+                                    eng_name = re.sub(r'\s+', ' ', eng_name)
+                                    po_data.append({
+                                        "desc": eng_name,
+                                        "qty": qty_val,
+                                        "price": price_val,
+                                        "value": value_val
+                                    })
             else:
                 po_df = load_with_fallback(self.po_file)
                 if po_df is None or po_df.empty or len(po_df.columns) == 0:
