@@ -1780,9 +1780,34 @@ class EcomInvoiceProcessor:
 
                     if not po_data:
                         for page in pdf.pages:
-                            text = page.extract_text()
-                            if not text: continue
-                            for line in text.split('\n'):
+                            lines = []
+                            try:
+                                words = page.extract_words(x_tolerance=3, y_tolerance=3)
+                                if words:
+                                    words.sort(key=lambda w: w['top'])
+                                    current_row = []
+                                    current_y = None
+                                    for w in words:
+                                        if current_y is None:
+                                            current_y = w['top']
+                                            current_row.append(w)
+                                        elif abs(w['top'] - current_y) <= 4.0:
+                                            current_row.append(w)
+                                        else:
+                                            current_row.sort(key=lambda x: x['x0'])
+                                            lines.append(" ".join(x['text'] for x in current_row))
+                                            current_y = w['top']
+                                            current_row = [w]
+                                    if current_row:
+                                        current_row.sort(key=lambda x: x['x0'])
+                                        lines.append(" ".join(x['text'] for x in current_row))
+                            except: pass
+                            
+                            if not lines:
+                                text = page.extract_text()
+                                if text: lines = text.split('\n')
+                                
+                            for line in lines:
                                 # Match lines starting with a number and ending with at least 4 numbers (qty, price, discount, total...)
                                 match = re.match(r'^(\d+\s+)?(.+?)\s+((?:[\d.,]+\s*){4,})$', line.strip(), re.IGNORECASE)
                                 if match:
